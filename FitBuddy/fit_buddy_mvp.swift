@@ -13,6 +13,8 @@ import PhotosUI
 import Vision
 import CoreML
 import GoogleGenerativeAI
+import Speech
+import AVFoundation
 
 @main
 struct FitBuddyApp: App {
@@ -159,6 +161,7 @@ struct HomeView: View {
     @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
     @AppStorage("userBMI") private var bmi: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
+    @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
     
     var body: some View {
         ScrollView {
@@ -206,7 +209,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                     
                     Button("Update Profile") {
-                        // This would reset onboarding
+                        hasOnboarded = false
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity)
@@ -239,7 +242,7 @@ struct ProfileRow: View {
 // MARK: ‑ Chatbot + Calendar Integration
 struct ChatbotView: View {
     @State private var input: String = ""
-    @State private var messages: [ChatBubble] = [ChatBubble(text: "Hi! I'm FitBuddy! Ask me for a personalized workout plan based on your profile.", isUser: false)]
+    @State private var messages: [ChatBubble] = [ChatBubble(text: "Hi! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
     @AppStorage("userGoal") private var goal: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
     @AppStorage("userWeight") private var weight: String = ""
@@ -250,6 +253,8 @@ struct ChatbotView: View {
     @AppStorage("userBMI") private var bmi: String = ""
     private let gpt = GPTService()
     private let calendar = CalendarManager()
+    @StateObject private var speechManager = SpeechRecognitionManager()
+    @StateObject private var profileManager = ProfileManager()
     @State private var isLoading = false
     
     var body: some View {
@@ -286,16 +291,54 @@ struct ChatbotView: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            
+            // Voice transcription display
+            if !speechManager.transcribedText.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("🎤 You said:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(speechManager.transcribedText)
+                        .padding(8)
+                        .background(Color.yellow.opacity(0.2))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+                .padding(.horizontal)
+            }
+            
             Divider()
+            
+            // Input area with voice button
             HStack {
-                TextField("Ask for a workout plan...", text: $input)
+                // Voice button
+                Button(action: {
+                    if speechManager.isRecording {
+                        speechManager.stopRecording()
+                        input = speechManager.transcribedText
+                    } else {
+                        speechManager.startRecording()
+                    }
+                }) {
+                    Image(systemName: speechManager.isRecording ? "stop.circle.fill" : "mic.circle.fill")
+                        .font(.title2)
+                        .foregroundColor(speechManager.isRecording ? .red : .blue)
+                }
+                .disabled(!speechManager.isAuthorized)
+                
+                TextField("Ask for a workout plan or update profile...", text: $input)
                     .textFieldStyle(.roundedBorder)
                     .disabled(isLoading)
+                
                 Button("Send") { send() }
                     .disabled(input.isEmpty || isLoading)
                     .buttonStyle(.borderedProminent)
             }
             .padding()
+        }
+        .onAppear {
+            if !speechManager.isAuthorized {
+                speechManager.requestAuthorization()
+            }
         }
     }
     
@@ -305,6 +348,15 @@ struct ChatbotView: View {
         messages.append(ChatBubble(text: userMessage, isUser: true))
         input = ""
         isLoading = true
+        
+        // Check if this is a profile update command
+        let lowerMessage = userMessage.lowercased()
+        if lowerMessage.contains("update") && lowerMessage.contains("profile") {
+            let profileUpdate = profileManager.updateProfile(from: userMessage)
+            messages.append(ChatBubble(text: profileUpdate, isUser: false))
+            isLoading = false
+            return
+        }
         
         // Create a comprehensive fitness-focused prompt
         let contextPrompt = """
@@ -327,6 +379,7 @@ struct ChatbotView: View {
         3. Consider the user's equipment limitations
         4. Adapt exercises to their fitness level
         5. Account for age, gender, and BMI in recommendations
+        6. If they ask about updating their profile, suggest they say "Update my profile" followed by their details
 
         WORKOUT PLAN FORMAT (if requested):
         🏋️ **PERSONALIZED WORKOUT PLAN**
@@ -529,5 +582,192 @@ class FoodClassifier {
         // TODO: Integrate CoreML Vision model. For demo, always return apple.
         let name = "apple"
         return FoodLabel(name: name, calories: lookup[name] ?? 0)
+    }
+}
+
+// MARK: - Speech Recognition Manager
+class SpeechRecognitionManager: NSObject, ObservableObject {
+    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private let audioEngine = AVAudioEngine()
+    
+    @Published var isRecording = false
+    @Published var transcribedText = ""
+    @Published var isAuthorized = false
+    
+    override init() {
+        super.init()
+        requestAuthorization()
+    }
+    
+    func requestAuthorization() {
+        SFSpeechRecognizer.requestAuthorization { status in
+            DispatchQueue.main.async {
+                self.isAuthorized = status == .authorized
+            }
+        }
+    }
+    
+    func startRecording() {
+        guard !isRecording else { return }
+        
+        // Reset transcribed text
+        transcribedText = ""
+        
+        // Configure audio session
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Audio session setup failed: \(error)")
+            return
+        }
+        
+        // Create recognition request
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        guard let recognitionRequest = recognitionRequest else { return }
+        recognitionRequest.shouldReportPartialResults = true
+        
+        // Start recognition task
+        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
+            if let result = result {
+                DispatchQueue.main.async {
+                    self.transcribedText = result.bestTranscription.formattedString
+                }
+            }
+            
+            if error != nil {
+                self.stopRecording()
+            }
+        }
+        
+        // Configure audio input
+        let inputNode = audioEngine.inputNode
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+            recognitionRequest.append(buffer)
+        }
+        
+        // Start audio engine
+        audioEngine.prepare()
+        do {
+            try audioEngine.start()
+            DispatchQueue.main.async {
+                self.isRecording = true
+            }
+        } catch {
+            print("Audio engine failed to start: \(error)")
+        }
+    }
+    
+    func stopRecording() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        
+        DispatchQueue.main.async {
+            self.isRecording = false
+        }
+    }
+}
+
+// MARK: - Profile Manager
+class ProfileManager: ObservableObject {
+    @AppStorage("userGoal") var goal: String = ""
+    @AppStorage("userWeight") var weight: String = ""
+    @AppStorage("userHeight") var height: String = ""
+    @AppStorage("userAge") var age: String = ""
+    @AppStorage("userGender") var gender: String = ""
+    @AppStorage("userFitnessLevel") var fitnessLevel: String = ""
+    @AppStorage("userBMI") var bmi: String = ""
+    @AppStorage("userEquipment") var equipment: String = ""
+    
+    func updateProfile(from text: String) -> String {
+        let lowerText = text.lowercased()
+        
+        // Extract weight
+        if let weightMatch = lowerText.range(of: #"(\d+)\s*(?:pounds?|lbs?)"#, options: .regularExpression) {
+            let weightString = String(lowerText[weightMatch])
+            if let weightValue = weightString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined().first {
+                weight = String(weightValue)
+            }
+        }
+        
+        // Extract height
+        if let heightMatch = lowerText.range(of: #"(\d+)\s*(?:inches?|in)"#, options: .regularExpression) {
+            let heightString = String(lowerText[heightMatch])
+            if let heightValue = heightString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined().first {
+                height = String(heightValue)
+            }
+        }
+        
+        // Extract age
+        if let ageMatch = lowerText.range(of: #"(\d+)\s*(?:years?|yrs?)"#, options: .regularExpression) {
+            let ageString = String(lowerText[ageMatch])
+            if let ageValue = ageString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined().first {
+                age = String(ageValue)
+            }
+        }
+        
+        // Extract gender
+        if lowerText.contains("male") {
+            gender = "male"
+        } else if lowerText.contains("female") {
+            gender = "female"
+        }
+        
+        // Extract fitness level
+        if lowerText.contains("beginner") {
+            fitnessLevel = "beginner"
+        } else if lowerText.contains("intermediate") {
+            fitnessLevel = "intermediate"
+        } else if lowerText.contains("advanced") {
+            fitnessLevel = "advanced"
+        }
+        
+        // Extract goal
+        if lowerText.contains("build muscle") || lowerText.contains("muscle") {
+            goal = "build muscle"
+        } else if lowerText.contains("lose weight") || lowerText.contains("weight loss") {
+            goal = "lose weight"
+        } else if lowerText.contains("cardio") || lowerText.contains("endurance") {
+            goal = "improve cardio"
+        }
+        
+        // Extract equipment
+        var equipmentList: [String] = []
+        if lowerText.contains("dumbbell") {
+            equipmentList.append("dumbbells")
+        }
+        if lowerText.contains("resistance band") {
+            equipmentList.append("resistance bands")
+        }
+        if lowerText.contains("none") || lowerText.contains("no equipment") {
+            equipmentList.append("none")
+        }
+        if !equipmentList.isEmpty {
+            equipment = equipmentList.joined(separator: ", ")
+        }
+        
+        // Calculate BMI if we have weight and height
+        if !weight.isEmpty && !height.isEmpty {
+            calculateBMI()
+        }
+        
+        return "Profile updated! I've extracted: \(goal.isEmpty ? "" : "Goal: \(goal), ")\(weight.isEmpty ? "" : "Weight: \(weight)lbs, ")\(height.isEmpty ? "" : "Height: \(height)in, ")\(age.isEmpty ? "" : "Age: \(age), ")\(gender.isEmpty ? "" : "Gender: \(gender), ")\(fitnessLevel.isEmpty ? "" : "Level: \(fitnessLevel), ")\(equipment.isEmpty ? "" : "Equipment: \(equipment)")"
+    }
+    
+    private func calculateBMI() {
+        guard let weightValue = Double(weight),
+              let heightValue = Double(height) else { return }
+        
+        let heightInMeters = heightValue * 0.0254
+        let weightInKg = weightValue * 0.453592
+        let bmiValue = weightInKg / (heightInMeters * heightInMeters)
+        
+        bmi = String(format: "%.1f", bmiValue)
     }
 }
