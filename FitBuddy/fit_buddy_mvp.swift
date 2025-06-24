@@ -50,20 +50,87 @@ struct OnboardingView: View {
     @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
     @AppStorage("userGoal") private var goal: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
+    @AppStorage("userWeight") private var weight: String = ""
+    @AppStorage("userHeight") private var height: String = ""
+    @AppStorage("userAge") private var age: String = ""
+    @AppStorage("userGender") private var gender: String = ""
+    @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
+    @AppStorage("userBMI") private var bmi: String = ""
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Text("👋 Welcome to FitBuddy")
-                .font(.largeTitle).bold()
-            TextField("Your primary fitness goal", text: $goal)
-                .textFieldStyle(.roundedBorder)
-            TextField("Available equipment (e.g. dumbbells)", text: $equipment)
-                .textFieldStyle(.roundedBorder)
-            Button(action: { hasOnboarded = true }) {
-                Text("Let's Go!").frame(maxWidth: .infinity)
+        ScrollView {
+            VStack(spacing: 20) {
+                Text("👋 Welcome to FitBuddy")
+                    .font(.largeTitle).bold()
+                
+                Text("Let's create your personalized fitness profile")
+                    .font(.headline)
+                    .foregroundColor(.secondary)
+                
+                VStack(spacing: 15) {
+                    TextField("Primary fitness goal (e.g., build muscle, lose weight, improve cardio)", text: $goal)
+                        .textFieldStyle(.roundedBorder)
+                    
+                    TextField("Available equipment (e.g., dumbbells, resistance bands, none)", text: $equipment)
+                        .textFieldStyle(.roundedBorder)
+                    
+                    HStack {
+                        TextField("Weight (lbs)", text: $weight)
+                            .textFieldStyle(.roundedBorder)
+                            .keyboardType(.numberPad)
+                        
+                        TextField("Height (inches)", text: $height)
+                            .textFieldStyle(.roundedBorder)
+                            .keyboardType(.numberPad)
+                    }
+                    
+                    HStack {
+                        TextField("Age", text: $age)
+                            .textFieldStyle(.roundedBorder)
+                            .keyboardType(.numberPad)
+                        
+                        Picker("Gender", selection: $gender) {
+                            Text("Select").tag("")
+                            Text("Male").tag("male")
+                            Text("Female").tag("female")
+                            Text("Other").tag("other")
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity)
+                    }
+                    
+                    Picker("Fitness Level", selection: $fitnessLevel) {
+                        Text("Select Level").tag("")
+                        Text("Beginner").tag("beginner")
+                        Text("Intermediate").tag("intermediate")
+                        Text("Advanced").tag("advanced")
+                    }
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: .infinity)
+                }
+                
+                Button(action: { 
+                    calculateBMI()
+                    hasOnboarded = true 
+                }) {
+                    Text("Create My Profile").frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(goal.isEmpty || equipment.isEmpty || weight.isEmpty || height.isEmpty || age.isEmpty || gender.isEmpty || fitnessLevel.isEmpty)
             }
-            .buttonStyle(.borderedProminent)
+            .padding()
         }
-        .padding()
+    }
+    
+    private func calculateBMI() {
+        guard let weightValue = Double(weight),
+              let heightValue = Double(height) else { return }
+        
+        let heightInMeters = heightValue * 0.0254 // Convert inches to meters
+        let weightInKg = weightValue * 0.453592 // Convert lbs to kg
+        let bmiValue = weightInKg / (heightInMeters * heightInMeters)
+        
+        bmi = String(format: "%.1f", bmiValue)
     }
 }
 
@@ -84,23 +151,103 @@ struct MainTabView: View {
 // MARK: ‑ Home
 struct HomeView: View {
     @State private var streak: Int = 0
+    @AppStorage("userGoal") private var goal: String = ""
+    @AppStorage("userWeight") private var weight: String = ""
+    @AppStorage("userHeight") private var height: String = ""
+    @AppStorage("userAge") private var age: String = ""
+    @AppStorage("userGender") private var gender: String = ""
+    @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
+    @AppStorage("userBMI") private var bmi: String = ""
+    @AppStorage("userEquipment") private var equipment: String = ""
+    
     var body: some View {
-        VStack(spacing: 12) {
-            Text("Daily Streak: \(streak) 🔥")
-                .font(.title2)
-            Text("Complete a workout today to keep it alive!")
-                .foregroundColor(.secondary)
+        ScrollView {
+            VStack(spacing: 20) {
+                // Streak Section
+                VStack(spacing: 12) {
+                    Text("Daily Streak: \(streak) 🔥")
+                        .font(.title2)
+                    Text("Complete a workout today to keep it alive!")
+                        .foregroundColor(.secondary)
+                }
+                .padding()
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Profile Section
+                VStack(alignment: .leading, spacing: 15) {
+                    Text("🏃‍♂️ Your Fitness Profile")
+                        .font(.headline)
+                        .bold()
+                    
+                    ProfileRow(title: "Goal", value: goal.isEmpty ? "Not set" : goal)
+                    ProfileRow(title: "Weight", value: weight.isEmpty ? "Not set" : "\(weight) lbs")
+                    ProfileRow(title: "Height", value: height.isEmpty ? "Not set" : "\(height) inches")
+                    ProfileRow(title: "Age", value: age.isEmpty ? "Not set" : "\(age) years")
+                    ProfileRow(title: "Gender", value: gender.isEmpty ? "Not set" : gender.capitalized)
+                    ProfileRow(title: "Fitness Level", value: fitnessLevel.isEmpty ? "Not set" : fitnessLevel.capitalized)
+                    ProfileRow(title: "BMI", value: bmi.isEmpty ? "Not set" : bmi)
+                    ProfileRow(title: "Equipment", value: equipment.isEmpty ? "Not set" : equipment)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                
+                // Quick Actions
+                VStack(spacing: 12) {
+                    Text("Quick Actions")
+                        .font(.headline)
+                        .bold()
+                    
+                    Button("Ask for Workout Plan") {
+                        // This would navigate to chat
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                    
+                    Button("Update Profile") {
+                        // This would reset onboarding
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: .infinity)
+                }
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .padding()
         }
-        .padding()
+    }
+}
+
+struct ProfileRow: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        HStack {
+            Text(title)
+                .foregroundColor(.secondary)
+                .frame(width: 100, alignment: .leading)
+            Text(value)
+                .bold()
+            Spacer()
+        }
     }
 }
 
 // MARK: ‑ Chatbot + Calendar Integration
 struct ChatbotView: View {
     @State private var input: String = ""
-    @State private var messages: [ChatBubble] = [ChatBubble(text: "Hi! I'm FitBuddy! Ask me for a personalized 3-day workout plan based on your goals and equipment.", isUser: false)]
+    @State private var messages: [ChatBubble] = [ChatBubble(text: "Hi! I'm FitBuddy! Ask me for a personalized workout plan based on your profile.", isUser: false)]
     @AppStorage("userGoal") private var goal: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
+    @AppStorage("userWeight") private var weight: String = ""
+    @AppStorage("userHeight") private var height: String = ""
+    @AppStorage("userAge") private var age: String = ""
+    @AppStorage("userGender") private var gender: String = ""
+    @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
+    @AppStorage("userBMI") private var bmi: String = ""
     private let gpt = GPTService()
     private let calendar = CalendarManager()
     @State private var isLoading = false
@@ -128,7 +275,7 @@ struct ChatbotView: View {
                             Spacer()
                             VStack {
                                 ProgressView()
-                                Text("Creating your workout plan...")
+                                Text("Creating your personalized plan...")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -159,42 +306,51 @@ struct ChatbotView: View {
         input = ""
         isLoading = true
         
-        // Create a structured prompt template for workout plans
+        // Create a comprehensive fitness-focused prompt
         let contextPrompt = """
-        You are FitBuddy, a personal fitness assistant. Generate responses in the following structured format:
+        You are FitBuddy, an expert fitness coach and personal trainer. Generate CONCISE, SPECIFIC, and ACTIONABLE responses.
 
-        USER CONTEXT:
-        - Fitness Goal: \(goal)
-        - Available Equipment: \(equipment)
-        - User Question: \(userMessage)
+        USER PROFILE:
+        - Goal: \(goal)
+        - Equipment: \(equipment)
+        - Weight: \(weight) lbs
+        - Height: \(height) inches
+        - Age: \(age) years
+        - Gender: \(gender)
+        - Fitness Level: \(fitnessLevel)
+        - BMI: \(bmi)
+        - Question: \(userMessage)
 
         INSTRUCTIONS:
-        If the user asks for a workout plan, respond with this EXACT format:
+        1. Keep responses CONCISE (max 200 words for workout plans)
+        2. Be SPECIFIC with sets, reps, weights, and rest periods
+        3. Consider the user's equipment limitations
+        4. Adapt exercises to their fitness level
+        5. Account for age, gender, and BMI in recommendations
 
-        🏋️ **WORKOUT PLAN**
+        WORKOUT PLAN FORMAT (if requested):
+        🏋️ **PERSONALIZED WORKOUT PLAN**
 
-        **Day 1: [Focus Area]**
-        - Exercise 1: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 2: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 3: [Name] - [Sets] x [Reps] - [Rest]
+        **Day 1: [Specific Focus]**
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
 
-        **Day 2: [Focus Area]**
-        - Exercise 1: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 2: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 3: [Name] - [Sets] x [Reps] - [Rest]
+        **Day 2: [Specific Focus]**
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
 
-        **Day 3: [Focus Area]**
-        - Exercise 1: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 2: [Name] - [Sets] x [Reps] - [Rest]
-        - Exercise 3: [Name] - [Sets] x [Reps] - [Rest]
+        **Day 3: [Specific Focus]**
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
+        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
 
-        💡 **Tips:**
-        - [Relevant fitness tip]
-        - [Nutrition advice if applicable]
+        💡 **Personalized Tips:**
+        - [Specific advice based on their profile]
+        - [Nutrition tip if relevant]
 
-        If the user asks for general fitness advice, respond in a friendly, informative way with clear bullet points.
-
-        Always consider their equipment limitations and fitness goals when creating plans.
+        For general questions, provide specific, actionable advice in 2-3 bullet points.
         """
         
         Task {
