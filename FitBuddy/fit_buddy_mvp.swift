@@ -161,15 +161,19 @@ struct HomeView: View {
     @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
     @AppStorage("userBMI") private var bmi: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
+    @AppStorage("userName") private var userName: String = ""
     @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
     
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Streak Section
+                // Welcome Section
                 VStack(spacing: 12) {
-                    Text("Daily Streak: \(streak) 🔥")
+                    Text("Welcome back, \(userName.isEmpty ? "Fitness Buddy" : userName)! 👋")
                         .font(.title2)
+                        .bold()
+                    Text("Daily Streak: \(streak) 🔥")
+                        .font(.headline)
                     Text("Complete a workout today to keep it alive!")
                         .foregroundColor(.secondary)
                 }
@@ -183,6 +187,7 @@ struct HomeView: View {
                         .font(.headline)
                         .bold()
                     
+                    ProfileRow(title: "Name", value: userName.isEmpty ? "Not set" : userName)
                     ProfileRow(title: "Goal", value: goal.isEmpty ? "Not set" : goal)
                     ProfileRow(title: "Weight", value: weight.isEmpty ? "Not set" : "\(weight) lbs")
                     ProfileRow(title: "Height", value: height.isEmpty ? "Not set" : "\(height) inches")
@@ -213,6 +218,13 @@ struct HomeView: View {
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: .infinity)
+                    
+                    Button("Reset Onboarding") {
+                        resetProfile()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.red)
+                    .frame(maxWidth: .infinity)
                 }
                 .padding()
                 .background(Color.green.opacity(0.1))
@@ -220,6 +232,19 @@ struct HomeView: View {
             }
             .padding()
         }
+    }
+    
+    private func resetProfile() {
+        userName = ""
+        goal = ""
+        weight = ""
+        height = ""
+        age = ""
+        gender = ""
+        fitnessLevel = ""
+        bmi = ""
+        equipment = ""
+        hasOnboarded = false
     }
 }
 
@@ -242,7 +267,7 @@ struct ProfileRow: View {
 // MARK: ‑ Chatbot + Calendar Integration
 struct ChatbotView: View {
     @State private var input: String = ""
-    @State private var messages: [ChatBubble] = [ChatBubble(text: "Hi! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
+    @State private var messages: [ChatBubble] = []
     @AppStorage("userGoal") private var goal: String = ""
     @AppStorage("userEquipment") private var equipment: String = ""
     @AppStorage("userWeight") private var weight: String = ""
@@ -251,11 +276,15 @@ struct ChatbotView: View {
     @AppStorage("userGender") private var gender: String = ""
     @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
     @AppStorage("userBMI") private var bmi: String = ""
+    @AppStorage("userName") private var userName: String = ""
+    @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
     private let gpt = GPTService()
     private let calendar = CalendarManager()
     @StateObject private var speechManager = SpeechRecognitionManager()
     @StateObject private var profileManager = ProfileManager()
     @State private var isLoading = false
+    @State private var onboardingStep = 0
+    @State private var isOnboarding = false
     
     var body: some View {
         VStack {
@@ -280,7 +309,7 @@ struct ChatbotView: View {
                             Spacer()
                             VStack {
                                 ProgressView()
-                                Text("Creating your personalized plan...")
+                                Text(isOnboarding ? "Processing..." : "Creating your personalized plan...")
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -325,7 +354,7 @@ struct ChatbotView: View {
                 }
                 .disabled(!speechManager.isAuthorized)
                 
-                TextField("Ask for a workout plan or update profile...", text: $input)
+                TextField(isOnboarding ? "Type your answer..." : "Ask for a workout plan or update profile...", text: $input)
                     .textFieldStyle(.roundedBorder)
                     .disabled(isLoading)
                 
@@ -339,7 +368,166 @@ struct ChatbotView: View {
             if !speechManager.isAuthorized {
                 speechManager.requestAuthorization()
             }
+            startOnboardingIfNeeded()
         }
+    }
+    
+    private func startOnboardingIfNeeded() {
+        if !hasOnboarded || (userName.isEmpty && age.isEmpty && weight.isEmpty && height.isEmpty && goal.isEmpty) {
+            isOnboarding = true
+            onboardingStep = 0
+            messages = []
+            startOnboarding()
+        } else {
+            isOnboarding = false
+            if messages.isEmpty {
+                messages = [ChatBubble(text: "Hi \(userName)! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
+            }
+        }
+    }
+    
+    private func startOnboarding() {
+        messages.append(ChatBubble(text: "Hi! I'm FitBuddy, your personal fitness assistant! 👋\n\nLet's get to know each other so I can create the perfect workout plan for you.\n\nWhat's your name?", isUser: false))
+    }
+    
+    private func handleOnboardingResponse() {
+        let userResponse = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        switch onboardingStep {
+        case 0: // Name
+            userName = userResponse
+            messages.append(ChatBubble(text: "Nice to meet you, \(userName)! 😊\n\nHow old are you?", isUser: false))
+            onboardingStep = 1
+            
+        case 1: // Age
+            if let ageValue = Int(userResponse) {
+                age = String(ageValue)
+                messages.append(ChatBubble(text: "Great! Now, what's your weight? You can tell me in pounds (lbs) or kilograms (kg).", isUser: false))
+                onboardingStep = 2
+            } else {
+                messages.append(ChatBubble(text: "Please enter a valid age (just the number).", isUser: false))
+            }
+            
+        case 2: // Weight
+            let lowerResponse = userResponse.lowercased()
+            if lowerResponse.contains("kg") {
+                // Convert kg to lbs
+                if let kgValue = Double(lowerResponse.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces)) {
+                    let lbsValue = kgValue * 2.20462
+                    weight = String(format: "%.1f", lbsValue)
+                }
+            } else {
+                // Assume lbs
+                if let lbsValue = Double(lowerResponse.replacingOccurrences(of: "lbs", with: "").replacingOccurrences(of: "pounds", with: "").trimmingCharacters(in: .whitespaces)) {
+                    weight = String(format: "%.1f", lbsValue)
+                }
+            }
+            
+            if !weight.isEmpty {
+                messages.append(ChatBubble(text: "Perfect! Now, what's your height? You can tell me in inches or centimeters.", isUser: false))
+                onboardingStep = 3
+            } else {
+                messages.append(ChatBubble(text: "Please enter a valid weight (e.g., '150 lbs' or '68 kg').", isUser: false))
+            }
+            
+        case 3: // Height
+            let lowerResponse = userResponse.lowercased()
+            if lowerResponse.contains("cm") {
+                // Convert cm to inches
+                if let cmValue = Double(lowerResponse.replacingOccurrences(of: "cm", with: "").trimmingCharacters(in: .whitespaces)) {
+                    let inchesValue = cmValue / 2.54
+                    height = String(format: "%.1f", inchesValue)
+                }
+            } else {
+                // Assume inches
+                if let inchesValue = Double(lowerResponse.replacingOccurrences(of: "inches", with: "").replacingOccurrences(of: "in", with: "").trimmingCharacters(in: .whitespaces)) {
+                    height = String(format: "%.1f", inchesValue)
+                }
+            }
+            
+            if !height.isEmpty {
+                messages.append(ChatBubble(text: "Great! Now, what's your primary fitness goal?\n\nChoose one:\n• Lose weight\n• Build muscle\n• Improve cardio/endurance\n• General fitness\n• Other (tell me more)", isUser: false))
+                onboardingStep = 4
+            } else {
+                messages.append(ChatBubble(text: "Please enter a valid height (e.g., '5 feet 10 inches' or '178 cm').", isUser: false))
+            }
+            
+        case 4: // Goal
+            let lowerResponse = userResponse.lowercased()
+            if lowerResponse.contains("lose") || lowerResponse.contains("weight") {
+                goal = "lose weight"
+            } else if lowerResponse.contains("build") || lowerResponse.contains("muscle") {
+                goal = "build muscle"
+            } else if lowerResponse.contains("cardio") || lowerResponse.contains("endurance") {
+                goal = "improve cardio"
+            } else if lowerResponse.contains("general") || lowerResponse.contains("fitness") {
+                goal = "general fitness"
+            } else {
+                goal = userResponse
+            }
+            
+            messages.append(ChatBubble(text: "Excellent choice! What equipment do you have available?\n\nOptions:\n• Dumbbells\n• Resistance bands\n• Gym access\n• No equipment (bodyweight only)\n• Other (tell me what you have)", isUser: false))
+            onboardingStep = 5
+            
+        case 5: // Equipment
+            equipment = userResponse
+            messages.append(ChatBubble(text: "Perfect! One more question: What's your current fitness level?\n\n• Beginner (new to exercise)\n• Intermediate (some experience)\n• Advanced (regular exerciser)", isUser: false))
+            onboardingStep = 6
+            
+        case 6: // Fitness Level
+            let lowerResponse = userResponse.lowercased()
+            if lowerResponse.contains("beginner") {
+                fitnessLevel = "beginner"
+            } else if lowerResponse.contains("intermediate") {
+                fitnessLevel = "intermediate"
+            } else if lowerResponse.contains("advanced") {
+                fitnessLevel = "advanced"
+            } else {
+                fitnessLevel = "beginner" // Default
+            }
+            
+            // Calculate BMI
+            if !weight.isEmpty && !height.isEmpty {
+                calculateBMI()
+            }
+            
+            // Complete onboarding
+            hasOnboarded = true
+            isOnboarding = false
+            
+            let welcomeMessage = """
+            🎉 Perfect! Your profile is complete, \(userName)!
+            
+            📊 Your Profile:
+            • Age: \(age) years
+            • Weight: \(weight) lbs
+            • Height: \(height) inches
+            • BMI: \(bmi)
+            • Goal: \(goal)
+            • Equipment: \(equipment)
+            • Level: \(fitnessLevel.capitalized)
+            
+            I'm ready to create personalized workout plans just for you! 
+            
+            Try asking me for a workout plan or any fitness questions. You can also say "Update my profile" anytime to change your details.
+            """
+            
+            messages.append(ChatBubble(text: welcomeMessage, isUser: false))
+            
+        default:
+            break
+        }
+    }
+    
+    private func calculateBMI() {
+        guard let weightValue = Double(weight),
+              let heightValue = Double(height) else { return }
+        
+        let heightInMeters = heightValue * 0.0254
+        let weightInKg = weightValue * 0.453592
+        let bmiValue = weightInKg / (heightInMeters * heightInMeters)
+        
+        bmi = String(format: "%.1f", bmiValue)
     }
     
     func send() {
@@ -348,6 +536,12 @@ struct ChatbotView: View {
         messages.append(ChatBubble(text: userMessage, isUser: true))
         input = ""
         isLoading = true
+        
+        if isOnboarding {
+            handleOnboardingResponse()
+            isLoading = false
+            return
+        }
         
         // Check if this is a profile update command
         let lowerMessage = userMessage.lowercased()
@@ -363,6 +557,7 @@ struct ChatbotView: View {
         You are FitBuddy, an expert fitness coach and personal trainer. Generate CONCISE, SPECIFIC, and ACTIONABLE responses.
 
         USER PROFILE:
+        - Name: \(userName)
         - Goal: \(goal)
         - Equipment: \(equipment)
         - Weight: \(weight) lbs
@@ -380,6 +575,7 @@ struct ChatbotView: View {
         4. Adapt exercises to their fitness level
         5. Account for age, gender, and BMI in recommendations
         6. If they ask about updating their profile, suggest they say "Update my profile" followed by their details
+        7. Use their name \(userName) in responses to make it personal
 
         WORKOUT PLAN FORMAT (if requested):
         🏋️ **PERSONALIZED WORKOUT PLAN**

@@ -411,6 +411,8 @@
 				GEMINI_API_KEY = AIzaSyDmmEcuDDv64F6nJCFGTq2iFVS1lNxusHk;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FitBuddy needs calendar access to schedule your workouts.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FitBuddy needs microphone access to record your voice for speech recognition.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FitBuddy uses speech recognition to understand your voice commands and update your fitness profile.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -441,6 +443,8 @@
 				GEMINI_API_KEY = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FitBuddy needs calendar access to schedule your workouts.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FitBuddy needs microphone access to record your voice for speech recognition.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FitBuddy uses speech recognition to understand your voice commands and update your fitness profile.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
