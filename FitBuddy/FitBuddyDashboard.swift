@@ -70,10 +70,8 @@ struct FitBuddyDashboard: View {
                         .padding(.horizontal)
 
                     // (D) Latest Workouts
-                    if !workoutJournal.entries.isEmpty {
-                        WorkoutHistorySection(entries: workoutJournal.entries)
-                            .padding(.horizontal)
-                    }
+                    WorkoutHistorySection(entries: [])
+                        .padding(.horizontal)
                 }
                 .padding(.top, 24)
             }
