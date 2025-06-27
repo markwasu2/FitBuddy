@@ -16,11 +16,18 @@ struct WorkoutCalendarView: View {
                 CalendarGrid(selectedDate: $selectedDate, workoutJournal: workoutJournal)
                     .padding(.top, 12)
                 Spacer(minLength: 0)
-                NavigationLink(destination: DailyWorkoutView(date: selectedDate).environmentObject(workoutJournal), isActive: $showDaily) { EmptyView() }
+                NavigationLink(value: selectedDate) {
+                    EmptyView()
+                }
+                .navigationDestination(for: Date.self) { date in
+                    DailyWorkoutView(date: date).environmentObject(workoutJournal)
+                }
             }
             .background(Color.bgPrimary.ignoresSafeArea())
             .navigationTitle("Calendar")
-            .onChange(of: selectedDate) { _ in showDaily = true }
+            .onChange(of: selectedDate) { oldValue, newValue in 
+                showDaily = true 
+            }
         }
     }
 }
@@ -128,7 +135,7 @@ struct DailyWorkoutView: View {
                     .padding(.top, 40)
             } else {
                 ChecklistCard(entry: $entry)
-                    .onChange(of: entry.exercises) { _ in
+                    .onChange(of: entry.exercises) { oldValue, newValue in
                         updateProgress()
                     }
             }
@@ -198,7 +205,7 @@ struct ChecklistCard: View {
                             .foregroundColor(.textPrimary)
                     }
                     .toggleStyle(ChecklistToggleStyle())
-                    .onChange(of: ex.isCompleted) { _ in
+                    .onChange(of: ex.isCompleted) { oldValue, newValue in
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     }
                 }

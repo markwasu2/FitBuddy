@@ -293,13 +293,6 @@ class ChatMemoryManager: ObservableObject {
     }
 }
 
-struct ChatMessage: Identifiable {
-    var id: UUID = UUID()
-    let content: String
-    let isUser: Bool
-    let timestamp: Date
-}
-
 struct UserProfile: Codable {
     var name: String
     let age: Int
@@ -680,14 +673,26 @@ struct StatRow: View {
 // MARK: - Chatbot + Calendar Integration
 struct ChatbotView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var workoutJournal: WorkoutJournal
+    @EnvironmentObject var calendarManager: CalendarManager
+    @EnvironmentObject var gptService: GPTService
+    
+    @StateObject private var chatEngine: ChatEngine
     @State private var input: String = ""
     @State private var messages: [ChatMessage] = []
-    private let gpt = GPTService()
-    private let calendar = CalendarManager()
     @StateObject private var speechManager = SpeechRecognitionManager()
     @State private var isLoading = false
-    @State private var onboardingStep = 0
-    @State private var isOnboarding = false
+    
+    init() {
+        // Initialize with placeholder values, will be updated in onAppear
+        let engine = ChatEngine(
+            profileManager: ProfileManager(),
+            workoutJournal: WorkoutJournal(),
+            calendarManager: CalendarManager(),
+            gptService: GPTService()
+        )
+        self._chatEngine = StateObject(wrappedValue: engine)
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -740,48 +745,29 @@ struct ChatbotView: View {
             }
             
             // Input Bar
-            HStack(spacing: .spacingS) {
-                HStack(spacing: .spacingS) {
-                    TextField("Ask me anything about fitness...", text: $input)
-                        .font(.body)
-                        .padding(.horizontal, .spacingM)
-                        .padding(.vertical, .spacingS)
-                        .background(Color(red: 239/255, green: 239/255, blue: 244/255))
-                        .cornerRadius(24)
-                    
-                    Button(action: {
-                        if speechManager.isRecording {
-                            speechManager.stopRecording()
-                            input = speechManager.transcribedText
-                        } else {
-                            speechManager.startRecording()
-                        }
-                    }) {
-                        Image(systemName: speechManager.isRecording ? "waveform" : "mic.fill")
-                            .font(.system(size: 22))
-                            .foregroundColor(.accentBlue)
-                            .frame(width: 44, height: 44)
+            ChatInputBar(
+                text: $input,
+                onSend: send,
+                onVoiceInput: {
+                    if speechManager.isRecording {
+                        speechManager.stopRecording()
+                        input = speechManager.transcribedText
+                    } else {
+                        speechManager.startRecording()
                     }
-                    .disabled(!speechManager.isAuthorized)
-                }
-                
-                Button(action: send) {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                        .foregroundColor(input.isEmpty ? .textSecondary : .accentBlue)
-                }
-                .disabled(input.isEmpty || isLoading)
-            }
-            .padding(.horizontal, .spacingM)
-            .padding(.vertical, .spacingM)
-            .background(Color.bgPrimary)
+                },
+                isRecording: speechManager.isRecording,
+                isAuthorized: speechManager.isAuthorized
+            )
         }
         .background(Color.bgPrimary)
         .onAppear {
             if !speechManager.isAuthorized {
                 speechManager.requestAuthorization()
             }
-            startOnboardingIfNeeded()
+            // Update ChatEngine with environment objects
+            updateChatEngine()
+            startConversation()
         }
         .onChange(of: speechManager.transcribedText) { _, newValue in
             if !newValue.isEmpty && !speechManager.isRecording {
@@ -789,6 +775,26 @@ struct ChatbotView: View {
                 send()
             }
         }
+    }
+    
+    private func updateChatEngine() {
+        // Update ChatEngine with the actual environment objects
+        chatEngine.updateDependencies(
+            profileManager: profileManager,
+            workoutJournal: workoutJournal,
+            calendarManager: calendarManager,
+            gptService: gptService
+        )
+    }
+    
+    private func startConversation() {
+        let welcomeMessage = ChatMessage(
+            id: UUID(),
+            content: "Hi! I'm your AI fitness coach. I can help you create personalized workout plans, answer fitness questions, or track your progress. What would you like to do?",
+            isUser: false,
+            timestamp: Date()
+        )
+        messages.append(welcomeMessage)
     }
     
     private func send() {
@@ -801,62 +807,52 @@ struct ChatbotView: View {
         input = ""
         isLoading = true
         
-        // Simulate AI response
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            self.isLoading = false
+        // Use ChatEngine to handle the input
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let response = self.chatEngine.handle(userInput: userInput)
+            
+            // Handle bot actions
+            for action in response.actions {
+                self.handleBotAction(action)
+            }
+            
+            // Add bot response
             let botMessage = ChatMessage(
                 id: UUID(),
-                content: "Thanks for your message: '\(userInput)'! I'm here to help with your fitness journey.",
+                content: response.text,
                 isUser: false,
                 timestamp: Date()
             )
-            self.messages.append(botMessage)
-        }
-    }
-    
-    private func startOnboardingIfNeeded() {
-        if !profileManager.isOnboardingComplete || profileManager.name.isEmpty {
-            isOnboarding = true
-            onboardingStep = 0
-            messages = []
-            startOnboarding()
-        } else {
-            isOnboarding = false
-        }
-    }
-    
-    private func startOnboarding() {
-        // Onboarding logic would go here
-    }
-}
-
-struct ModernChatBubble: View {
-    let message: ChatMessage
-    
-    var body: some View {
-        HStack {
-            if message.isUser {
-                Spacer()
-                Text(message.content)
-                    .font(.system(size: 14))
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.accentBlue)
-                    .cornerRadius(18)
-            } else {
-                Text(message.content)
-                    .font(.system(size: 14))
-                    .foregroundColor(.textPrimary)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    .background(Color.bgSecondary)
-                    .cornerRadius(18)
-                Spacer()
+            
+            DispatchQueue.main.async {
+                self.messages.append(botMessage)
+                self.isLoading = false
             }
         }
     }
+    
+    private func handleBotAction(_ action: BotAction) {
+        switch action {
+        case .createPlan:
+            // Plan is already created in the response
+            break
+        case .schedulePlan(let date):
+            // Schedule in calendar
+            do {
+                try calendarManager.addWorkout(title: "Workout - Strength Training", offsetMinutes: 0)
+            } catch {
+                print("Failed to schedule workout: \(error)")
+            }
+        case .updatePlan(let patch):
+            // Handle plan updates
+            print("Updating plan with patch: \(patch)")
+        case .none:
+            break
+        }
+    }
 }
+
+// ModernChatBubble is now defined in ModernChatBubble.swift
 
 // MARK: ‑ Calorie Scanner (PhotosPicker + dummy Vision)
 struct ScannerView: View {
@@ -1297,10 +1293,35 @@ class WorkoutJournal: ObservableObject {
         let key = Self.dateKey(day)
         return entryDict[key]
     }
+    
+    func entry(on date: Date) -> WorkoutEntry? {
+        return entry(for: date)
+    }
 
-    func upsert(_ entry: WorkoutEntry) {
+    func upsert(_ entry: WorkoutEntry, merge: Bool = true) {
         let key = Self.dateKey(entry.date)
-        entryDict[key] = entry
+        if merge, let existingEntry = entryDict[key] {
+            // Merge exercises
+            var mergedExercises = existingEntry.exercises
+            for newExercise in entry.exercises {
+                if !mergedExercises.contains(where: { $0.name == newExercise.name }) {
+                    mergedExercises.append(newExercise)
+                }
+            }
+            let mergedEntry = WorkoutEntry(
+                date: entry.date,
+                exercises: mergedExercises,
+                notes: entry.notes.isEmpty ? existingEntry.notes : entry.notes,
+                calories: entry.calories > 0 ? entry.calories : existingEntry.calories,
+                type: entry.type.isEmpty ? existingEntry.type : entry.type,
+                duration: entry.duration > 0 ? entry.duration : existingEntry.duration,
+                mood: entry.mood,
+                difficulty: entry.difficulty
+            )
+            entryDict[key] = mergedEntry
+        } else {
+            entryDict[key] = entry
+        }
         entries = Array(entryDict.values).sorted { $0.date > $1.date }
         save()
     }
@@ -1531,7 +1552,7 @@ class CalendarManager: ObservableObject {
             status = EKEventStore.authorizationStatus(for: .event)
         }
         
-        guard status == .authorized || status == .fullAccess else {
+        guard status == .fullAccess else {
             throw NSError(domain: "CalendarError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Calendar access not authorized"])
         }
         
