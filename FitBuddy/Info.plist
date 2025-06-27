@@ -10,5 +10,11 @@
 	<string>FitBuddy uses your health data to track workouts, steps, heart rate, and show your fitness progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>FitBuddy writes your workout and activity data to Health to help you track your fitness progress.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>FitBuddy needs microphone access for voice commands and speech recognition features.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>FitBuddy uses speech recognition to understand your voice commands for workout planning and navigation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FitBuddy needs access to your photo library to scan food items for calorie tracking.</string>
 </dict>
 </plist>

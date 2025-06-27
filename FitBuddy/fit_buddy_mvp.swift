@@ -17,6 +17,7 @@ import Speech
 import AVFoundation
 import HealthKit
 import Foundation
+import CoreData
 
 // MARK: - Modern Design System
 extension Color {
@@ -60,24 +61,29 @@ struct CardShadow: ViewModifier {
 // MARK: - App Entry Point
 @main
 struct FitBuddyApp: App {
-    @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
+    let persistenceController = PersistenceController.shared
     @StateObject private var profileManager = ProfileManager()
     @StateObject private var gptService = GPTService()
     @StateObject private var workoutPlanManager = WorkoutPlanManager()
     @StateObject private var workoutJournal = WorkoutJournal()
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var notificationManager = NotificationManager()
+    @StateObject private var calendarManager = CalendarManager()
+    @StateObject private var chatEngine = ChatEngine()
     
     var body: some Scene {
         WindowGroup {
-            RootView()
+            ContentView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(profileManager)
                 .environmentObject(gptService)
                 .environmentObject(workoutPlanManager)
                 .environmentObject(workoutJournal)
                 .environmentObject(healthKitManager)
                 .environmentObject(notificationManager)
-                .preferredColorScheme(.light)
+                .environmentObject(calendarManager)
+                .environmentObject(chatEngine)
+                .preferredColorScheme(.dark)
         }
     }
 }
@@ -627,944 +633,587 @@ struct GoalButton: View {
 
 // MARK: - Tab Container
 struct MainTabView: View {
-    var body: some View {
-        TabView {
-            HomeView()
-                .tabItem { 
-                    Image(systemName: "house.fill")
-                }
-            ChatbotView()
-                .tabItem { 
-                    Image(systemName: "message.fill")
-                }
-            WorkoutCalendarView()
-                .tabItem {
-                    Image(systemName: "list.bullet.rectangle")
-                }
-        }
-        .accentColor(.accentBlue)
-    }
-}
-
-// MARK: - Home
-struct HomeView: View {
-    var body: some View {
-        FitBuddyDashboard()
-    }
-}
-
-struct StatRow: View {
-    let label: String
-    let value: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.caption)
-                .foregroundColor(.textSecondary)
-            Text(value)
-                .font(.body)
-                .fontWeight(.semibold)
-                .foregroundColor(.textPrimary)
-        }
-    }
-}
-
-// MARK: - Chatbot + Calendar Integration
-struct ChatbotView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @EnvironmentObject var workoutJournal: WorkoutJournal
     @EnvironmentObject var calendarManager: CalendarManager
     @EnvironmentObject var gptService: GPTService
-    
-    @StateObject private var chatEngine: ChatEngine
-    @State private var input: String = ""
-    @State private var messages: [ChatMessage] = []
-    @StateObject private var speechManager = SpeechRecognitionManager()
-    @State private var isLoading = false
-    
-    init() {
-        // Initialize with placeholder values, will be updated in onAppear
-        let engine = ChatEngine(
-            profileManager: ProfileManager(),
-            workoutJournal: WorkoutJournal(),
-            calendarManager: CalendarManager(),
-            gptService: GPTService()
-        )
-        self._chatEngine = StateObject(wrappedValue: engine)
-    }
+    @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var notificationManager: NotificationManager
+    @EnvironmentObject var chatEngine: ChatEngine
     
     var body: some View {
-        VStack(spacing: 0) {
-            // Chat Messages
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: .spacingM) {
-                        ForEach(messages) { message in
-                            ModernChatBubble(message: message)
-                                .id(message.id)
+        TabView {
+            HomeScreen()
+                .tabItem { 
+                    Image(systemName: "house.fill")
+                    Text("Home")
+                }
+            PlanScreen()
+                .tabItem { 
+                    Image(systemName: "calendar")
+                    Text("Plan")
+                }
+            CoachScreen()
+                .tabItem {
+                    Image(systemName: "message.and.waveform.fill")
+                    Text("Coach")
+                }
+            ProfileScreen()
+                .tabItem {
+                    Image(systemName: "person.fill")
+                    Text("Profile")
+                }
+        }
+        .accentColor(Color(hex: "#7C3AED"))
+        .onAppear {
+            // Configure tab bar appearance
+            let appearance = UITabBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = UIColor(Color(hex: "#1C1C2E"))
+            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color(hex: "#7C3AED"))
+            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#7C3AED"))]
+            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color(hex: "#9CA3AF"))
+            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#9CA3AF"))]
+            
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
+        }
+    }
+}
+
+// MARK: - Home Screen
+struct HomeScreen: View {
+    @EnvironmentObject var profileManager: ProfileManager
+    @State private var showingEditProfile = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Header
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Welcome Back,")
+                                .font(.subheadline)
+                                .foregroundColor(Color(hex: "#9CA3AF"))
+                            Text(profileManager.name)
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
+                        Spacer()
+                        Button(action: { showingEditProfile = true }) {
+                            Circle()
+                                .fill(Color(hex: "#7C3AED"))
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Text(String(profileManager.name.prefix(1)).uppercased())
+                                        .font(.headline)
+                                        .fontWeight(.bold)
+                                        .foregroundColor(.white)
+                                )
+                        }
+                    }
+                    .padding(.horizontal)
+                    
+                    // Today's Plan Card
+                    VStack(spacing: 16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Today's Plan")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "#C4B5FD"))
+                                Text("Full Body Strength")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                                Text("60 min • High Intensity")
+                                    .font(.subheadline)
+                                    .foregroundColor(Color(hex: "#C4B5FD"))
+                            }
+                            Spacer()
+                            Circle()
+                                .fill(Color.white.opacity(0.2))
+                                .frame(width: 40, height: 40)
+                                .overlay(
+                                    Image(systemName: "arrow.right")
+                                        .foregroundColor(.white)
+                                )
                         }
                         
-                        // Typing indicator
-                        if isLoading {
-                            HStack {
-                                ModernChatBubble(message: ChatMessage(
-                                    id: UUID(),
-                                    content: "",
-                                    isUser: false,
-                                    timestamp: Date()
-                                ))
-                                .overlay(
-                                    HStack(spacing: 4) {
-                                        ForEach(0..<3) { index in
-                                            Circle()
-                                                .fill(Color.textSecondary)
-                                                .frame(width: 6, height: 6)
-                                                .scaleEffect(1.0)
-                                                .animation(
-                                                    Animation.easeInOut(duration: 0.6)
-                                                        .repeatForever()
-                                                        .delay(Double(index) * 0.2),
-                                                    value: isLoading
-                                                )
-                                        }
-                                    }
-                                )
-                                Spacer()
+                        Button(action: {}) {
+                            Text("Start Workout")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundColor(Color(hex: "#7C3AED"))
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.white)
+                                .cornerRadius(12)
+                        }
+                    }
+                    .padding(20)
+                    .background(
+                        LinearGradient(
+                            colors: [Color(hex: "#7C3AED"), Color(hex: "#4F46E5")],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .cornerRadius(16)
+                    .padding(.horizontal)
+                    
+                    // Biometrics Section
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Biometrics")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
+                        
+                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
+                            BiometricCard(
+                                icon: "heart.fill",
+                                iconColor: Color(hex: "#F87171"),
+                                title: "Heart Rate",
+                                value: "72",
+                                unit: "bpm"
+                            )
+                            
+                            BiometricCard(
+                                icon: "figure.walk",
+                                iconColor: Color(hex: "#60A5FA"),
+                                title: "Steps",
+                                value: "4,521",
+                                unit: nil
+                            )
+                            
+                            BiometricCard(
+                                icon: "bed.double.fill",
+                                iconColor: Color(hex: "#34D399"),
+                                title: "Sleep",
+                                value: "7h 45m",
+                                unit: nil
+                            )
+                            
+                            BiometricCard(
+                                icon: "flame.fill",
+                                iconColor: Color(hex: "#FB923C"),
+                                title: "Calories",
+                                value: "1,204",
+                                unit: "kcal"
+                            )
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical)
+            }
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarHidden(true)
+        }
+        .sheet(isPresented: $showingEditProfile) {
+            EditProfileView()
+        }
+    }
+}
+
+struct BiometricCard: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    let value: String
+    let unit: String?
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(iconColor)
+                    .font(.title3)
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color(hex: "#D1D5DB"))
+            }
+            
+            HStack(alignment: .bottom, spacing: 4) {
+                Text(value)
+                    .font(.title)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                if let unit = unit {
+                    Text(unit)
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                }
+            }
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Plan Screen
+struct PlanScreen: View {
+    @State private var selectedDate = Date()
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Calendar
+                    VStack(spacing: 16) {
+                        HStack {
+                            Text("June 2025")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Spacer()
+                            HStack(spacing: 8) {
+                                Button(action: {}) {
+                                    Image(systemName: "chevron.left")
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(Color(hex: "#374151"))
+                                        .clipShape(Circle())
+                                }
+                                Button(action: {}) {
+                                    Image(systemName: "chevron.right")
+                                        .foregroundColor(.white)
+                                        .padding(8)
+                                        .background(Color(hex: "#374151"))
+                                        .clipShape(Circle())
+                                }
+                            }
+                        }
+                        
+                        // Calendar grid would go here
+                        // For now, showing a placeholder
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(hex: "#1C1C2E"))
+                            .frame(height: 200)
+                            .overlay(
+                                Text("Calendar View")
+                                    .foregroundColor(.white)
+                            )
+                    }
+                    .padding(16)
+                    .background(Color(hex: "#1C1C2E"))
+                    .cornerRadius(16)
+                    .padding(.horizontal)
+                    
+                    // Upcoming Workouts
+                    VStack(alignment: .leading, spacing: 16) {
+                        Text("Upcoming")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                            .padding(.horizontal)
+                        
+                        VStack(spacing: 12) {
+                            WorkoutCard(
+                                title: "Full Body Strength",
+                                time: "Today • 60 min",
+                                icon: "dumbbell.fill",
+                                iconColor: Color(hex: "#7C3AED")
+                            )
+                            
+                            WorkoutCard(
+                                title: "Active Recovery & Stretch",
+                                time: "Tomorrow • 30 min",
+                                icon: "figure.flexibility",
+                                iconColor: Color(hex: "#60A5FA")
+                            )
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.vertical)
+            }
+            .background(Color(hex: "#0D0D1A"))
+            .navigationTitle("Workout Plan")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+    }
+}
+
+struct WorkoutCard: View {
+    let title: String
+    let time: String
+    let icon: String
+    let iconColor: Color
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Circle()
+                .fill(iconColor.opacity(0.2))
+                .frame(width: 48, height: 48)
+                .overlay(
+                    Image(systemName: icon)
+                        .foregroundColor(iconColor)
+                        .font(.title3)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                Text(time)
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(Color(hex: "#6B7280"))
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Coach Screen
+struct CoachScreen: View {
+    @EnvironmentObject var chatEngine: ChatEngine
+    @State private var messageText = ""
+    
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 0) {
+                // Chat messages
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        ForEach(chatEngine.messages) { message in
+                            ChatBubble(message: message)
+                        }
+                    }
+                    .padding()
+                }
+                .background(Color(hex: "#0D0D1A"))
+                
+                // Suggestion chips
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(["New workout plan", "How's my progress?", "Adjust my goals"], id: \.self) { suggestion in
+                            Button(action: {
+                                messageText = suggestion
+                            }) {
+                                Text(suggestion)
+                                    .font(.subheadline)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color(hex: "#1C1C2E"))
+                                    .cornerRadius(20)
                             }
                         }
                     }
-                    .padding(.horizontal, .spacingM)
-                    .padding(.top, .spacingM)
+                    .padding(.horizontal)
                 }
-                .onChange(of: messages.count) { _, _ in
-                    withAnimation(.easeOut(duration: 0.3)) {
-                        proxy.scrollTo(messages.last?.id, anchor: .bottom)
+                .padding(.vertical, 8)
+                .background(Color(hex: "#0D0D1A"))
+                
+                // Input area
+                HStack(spacing: 12) {
+                    TextField("Ask me anything...", text: $messageText)
+                        .textFieldStyle(PlainTextFieldStyle())
+                        .padding()
+                        .background(Color(hex: "#1C1C2E"))
+                        .cornerRadius(25)
+                        .foregroundColor(.white)
+                    
+                    Button(action: {
+                        if !messageText.isEmpty {
+                            chatEngine.sendMessage(messageText)
+                            messageText = ""
+                        }
+                    }) {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                            .foregroundColor(Color(hex: "#7C3AED"))
                     }
                 }
+                .padding()
+                .background(Color(hex: "#0D0D1A"))
             }
-            
-            // Input Bar
-            ChatInputBar(
-                text: $input,
-                onSend: send,
-                onVoiceInput: {
-                    if speechManager.isRecording {
-                        speechManager.stopRecording()
-                        input = speechManager.transcribedText
-                    } else {
-                        speechManager.startRecording()
-                    }
-                },
-                isRecording: speechManager.isRecording,
-                isAuthorized: speechManager.isAuthorized
-            )
-        }
-        .background(Color.bgPrimary)
-        .onAppear {
-            if !speechManager.isAuthorized {
-                speechManager.requestAuthorization()
-            }
-            // Update ChatEngine with environment objects
-            updateChatEngine()
-            startConversation()
-        }
-        .onChange(of: speechManager.transcribedText) { _, newValue in
-            if !newValue.isEmpty && !speechManager.isRecording {
-                input = newValue
-                send()
-            }
-        }
-    }
-    
-    private func updateChatEngine() {
-        // Update ChatEngine with the actual environment objects
-        chatEngine.updateDependencies(
-            profileManager: profileManager,
-            workoutJournal: workoutJournal,
-            calendarManager: calendarManager,
-            gptService: gptService
-        )
-    }
-    
-    private func startConversation() {
-        let welcomeMessage = ChatMessage(
-            id: UUID(),
-            content: "Hi! I'm your AI fitness coach. I can help you create personalized workout plans, answer fitness questions, or track your progress. What would you like to do?",
-            isUser: false,
-            timestamp: Date()
-        )
-        messages.append(welcomeMessage)
-    }
-    
-    private func send() {
-        guard !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        
-        let userMessage = ChatMessage(id: UUID(), content: input, isUser: true, timestamp: Date())
-        messages.append(userMessage)
-        
-        let userInput = input
-        input = ""
-        isLoading = true
-        
-        // Use ChatEngine to handle the input
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let response = self.chatEngine.handle(userInput: userInput)
-            
-            // Handle bot actions
-            for action in response.actions {
-                self.handleBotAction(action)
-            }
-            
-            // Add bot response
-            let botMessage = ChatMessage(
-                id: UUID(),
-                content: response.text,
-                isUser: false,
-                timestamp: Date()
-            )
-            
-            DispatchQueue.main.async {
-                self.messages.append(botMessage)
-                self.isLoading = false
-            }
-        }
-    }
-    
-    private func handleBotAction(_ action: BotAction) {
-        switch action {
-        case .createPlan:
-            // Plan is already created in the response
-            break
-        case .schedulePlan(_):
-            // Schedule in calendar
-            do {
-                try calendarManager.addWorkout(title: "Workout - Strength Training", offsetMinutes: 0)
-            } catch {
-                print("Failed to schedule workout: \(error)")
-            }
-        case .updatePlan(let patch):
-            // Handle plan updates
-            print("Updating plan with patch: \(patch)")
-        case .none:
-            break
+            .navigationTitle("AI Coach")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
         }
     }
 }
 
-// ModernChatBubble is now defined in ModernChatBubble.swift
-
-// MARK: ‑ Calorie Scanner (PhotosPicker + dummy Vision)
-struct ScannerView: View {
-    @State private var selection: PhotosPickerItem?
-    @State private var calorieText: String = "Snap a meal photo to estimate calories."
-    private let classifier = FoodClassifier()
+struct ChatBubble: View {
+    let message: ChatMessage
+    
     var body: some View {
-        VStack(spacing: 20) {
-            Text(calorieText).multilineTextAlignment(.center)
-            PhotosPicker(selection: $selection, matching: .images) {
-                Label("Take Photo", systemImage: "camera")
-                    .padding()
-                    .background(Color.green.opacity(0.2))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+        HStack {
+            if message.isFromUser {
+                Spacer()
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(message.content)
+                        .padding()
+                        .background(Color(hex: "#7C3AED"))
+                        .foregroundColor(.white)
+                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [Color(hex: "#7C3AED"), Color(hex: "#4F46E5")],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 32, height: 32)
+                            .overlay(
+                                Text("AI")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                            )
+                        
+                        Text(message.content)
+                            .padding()
+                            .background(Color(hex: "#1C1C2E"))
+                            .foregroundColor(.white)
+                            .cornerRadius(16, corners: [.topLeft, .topRight, .bottomRight])
+                    }
+                }
+                Spacer()
             }
+        }
+    }
+}
+
+// MARK: - Profile Screen
+struct ProfileScreen: View {
+    @EnvironmentObject var profileManager: ProfileManager
+    @State private var showingEditProfile = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // User info
+                    HStack(spacing: 16) {
+                        Circle()
+                            .fill(Color(hex: "#7C3AED"))
+                            .frame(width: 80, height: 80)
+                            .overlay(
+                                Text(String(profileManager.name.prefix(1)).uppercased())
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.white)
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(profileManager.name)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                            Text("Joined May 2024")
+                                .font(.subheadline)
+                                .foregroundColor(Color(hex: "#9CA3AF"))
+                        }
+                        
+                        Spacer()
+                    }
+                    .padding(.horizontal)
+                    
+                    // Settings list
+                    VStack(spacing: 8) {
+                        SettingsRow(
+                            icon: "target",
+                            iconColor: Color(hex: "#7C3AED"),
+                            title: "My Goals"
+                        )
+                        
+                        SettingsRow(
+                            icon: "link",
+                            iconColor: Color(hex: "#60A5FA"),
+                            title: "Connected Devices"
+                        )
+                        
+                        SettingsRow(
+                            icon: "bell",
+                            iconColor: Color(hex: "#34D399"),
+                            title: "Notifications"
+                        )
+                        
+                        SettingsRow(
+                            icon: "person.crop.circle.badge.plus",
+                            iconColor: Color(hex: "#F87171"),
+                            title: "Account & Security"
+                        )
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical)
+            }
+            .background(Color(hex: "#0D0D1A"))
+            .navigationTitle("Profile & Settings")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+        }
+    }
+}
+
+struct SettingsRow: View {
+    let icon: String
+    let iconColor: Color
+    let title: String
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .foregroundColor(iconColor)
+                .font(.title3)
+                .frame(width: 24)
+            
+            Text(title)
+                .font(.body)
+                .foregroundColor(.white)
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(Color(hex: "#6B7280"))
+                .font(.caption)
         }
         .padding()
-        .onChange(of: selection) { oldValue, newValue in 
-            classify() 
-        }
-    }
-    func classify() {
-        guard let item = selection else { return }
-        Task {
-            if let data = try? await item.loadTransferable(type: Data.self),
-               let img = UIImage(data: data) {
-                let label = classifier.predict(image: img)
-                calorieText = "Detected \(label.name). ~\(label.calories) kcal."
-            }
-        }
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
     }
 }
 
-struct FoodLabel { let name: String; let calories: Int }
-
-class FoodClassifier {
-    private let lookup: [String: Int] = [
-        "apple": 95,
-        "banana": 105,
-        "broccoli": 55,
-        "rice": 206,
-        "chicken breast": 165
-    ]
-    func predict(image: UIImage) -> FoodLabel {
-        // TODO: Integrate CoreML Vision model. For demo, always return apple.
-        let name = "apple"
-        return FoodLabel(name: name, calories: lookup[name] ?? 0)
+// MARK: - Extensions
+extension View {
+    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
+        clipShape(RoundedCorner(radius: radius, corners: corners))
     }
 }
 
-// MARK: - Speech Recognition Manager
-class SpeechRecognitionManager: NSObject, ObservableObject {
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private let audioEngine = AVAudioEngine()
-    
-    @Published var isRecording = false
-    @Published var transcribedText = ""
-    @Published var isAuthorized = false
-    
-    override init() {
-        super.init()
-        requestAuthorization()
-    }
-    
-    func requestAuthorization() {
-        SFSpeechRecognizer.requestAuthorization { status in
-            DispatchQueue.main.async {
-                self.isAuthorized = status == .authorized
-            }
-        }
-    }
-    
-    func startRecording() {
-        guard !isRecording else { return }
-        
-        // Reset transcribed text
-        transcribedText = ""
-        
-        // Configure audio session
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("Audio session setup failed: \(error)")
-            return
-        }
-        
-        // Create recognition request
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { return }
-        recognitionRequest.shouldReportPartialResults = true
-        
-        // Start recognition task
-        recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { result, error in
-            if let result = result {
-                DispatchQueue.main.async {
-                    self.transcribedText = result.bestTranscription.formattedString
-                }
-            }
-            
-            if error != nil {
-                self.stopRecording()
-            }
-        }
-        
-        // Configure audio input
-        let inputNode = audioEngine.inputNode
-        let recordingFormat = inputNode.outputFormat(forBus: 0)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
-            recognitionRequest.append(buffer)
-        }
-        
-        // Start audio engine
-        audioEngine.prepare()
-        do {
-            try audioEngine.start()
-            DispatchQueue.main.async {
-                self.isRecording = true
-            }
-        } catch {
-            print("Audio engine failed to start: \(error)")
-        }
-    }
-    
-    func stopRecording() {
-        audioEngine.stop()
-        audioEngine.inputNode.removeTap(onBus: 0)
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
-        
-        DispatchQueue.main.async {
-            self.isRecording = false
-        }
-    }
-}
+struct RoundedCorner: Shape {
+    var radius: CGFloat = .infinity
+    var corners: UIRectCorner = .allCorners
 
-// MARK: - Profile Manager
-class ProfileManager: ObservableObject {
-    @Published var name: String = ""
-    @Published var age: Int = 25
-    @Published var height: Int = 170
-    @Published var weight: Int = 70
-    @Published var gender: String = ""
-    @Published var fitnessLevel: String = ""
-    @Published var equipment: [String] = []
-    @Published var goals: [String] = []
-    @Published var isOnboardingComplete: Bool = false
-    
-    init() {
-        loadProfile()
-    }
-    
-    func completeOnboarding() {
-        isOnboardingComplete = true
-        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-    }
-    
-    func resetProfile() {
-        name = ""
-        age = 25
-        height = 170
-        weight = 70
-        gender = ""
-        fitnessLevel = ""
-        equipment = []
-        goals = []
-        isOnboardingComplete = false
-        
-        UserDefaults.standard.removeObject(forKey: "userName")
-        UserDefaults.standard.removeObject(forKey: "age")
-        UserDefaults.standard.removeObject(forKey: "weight")
-        UserDefaults.standard.removeObject(forKey: "height")
-        UserDefaults.standard.removeObject(forKey: "gender")
-        UserDefaults.standard.removeObject(forKey: "fitnessLevel")
-        UserDefaults.standard.removeObject(forKey: "equipment")
-        UserDefaults.standard.removeObject(forKey: "goals")
-        UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-    }
-    
-    private func loadProfile() {
-        name = UserDefaults.standard.string(forKey: "userName") ?? ""
-        age = UserDefaults.standard.integer(forKey: "age")
-        height = UserDefaults.standard.integer(forKey: "height")
-        weight = UserDefaults.standard.integer(forKey: "weight")
-        gender = UserDefaults.standard.string(forKey: "gender") ?? ""
-        fitnessLevel = UserDefaults.standard.string(forKey: "fitnessLevel") ?? ""
-        equipment = UserDefaults.standard.string(forKey: "equipment")?.components(separatedBy: ",") ?? []
-        goals = UserDefaults.standard.string(forKey: "goals")?.components(separatedBy: ",") ?? []
-        isOnboardingComplete = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-    }
-    
-    func saveProfile() {
-        // Save individual properties to UserDefaults
-        UserDefaults.standard.set(name, forKey: "userName")
-        UserDefaults.standard.set(age, forKey: "age")
-        UserDefaults.standard.set(height, forKey: "height")
-        UserDefaults.standard.set(weight, forKey: "weight")
-        UserDefaults.standard.set(gender, forKey: "gender")
-        UserDefaults.standard.set(fitnessLevel, forKey: "fitnessLevel")
-        UserDefaults.standard.set(equipment.joined(separator: ","), forKey: "equipment")
-        UserDefaults.standard.set(goals.joined(separator: ","), forKey: "goals")
-        
-        // Also save as Profile struct for compatibility
-        let profile = Profile(
-            name: name,
-            age: age,
-            height: height,
-            weight: weight,
-            gender: gender,
-            fitnessLevel: fitnessLevel,
-            equipment: equipment,
-            goals: goals
+    func path(in rect: CGRect) -> Path {
+        let path = UIBezierPath(
+            roundedRect: rect,
+            byRoundingCorners: corners,
+            cornerRadii: CGSize(width: radius, height: radius)
         )
-        if let encoded = try? JSONEncoder().encode(profile) {
-            UserDefaults.standard.set(encoded, forKey: "profile")
-        }
-    }
-    
-    func updateProfile(from text: String) -> String {
-        let lowerText = text.lowercased()
-        // Extract weight
-        if let weightMatch = lowerText.range(of: #"(\d+)\s*(?:pounds?|lbs?)"#, options: .regularExpression) {
-            let weightString = String(lowerText[weightMatch])
-            if let weightValue = Int(weightString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) {
-                weight = weightValue
-            }
-        }
-        // Extract height
-        if let heightMatch = lowerText.range(of: #"(\d+)\s*(?:inches?|in)"#, options: .regularExpression) {
-            let heightString = String(lowerText[heightMatch])
-            if let heightValue = Int(heightString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) {
-                height = heightValue
-            }
-        }
-        // Extract age
-        if let ageMatch = lowerText.range(of: #"(\d+)\s*(?:years?|yrs?)"#, options: .regularExpression) {
-            let ageString = String(lowerText[ageMatch])
-            if let ageValue = Int(ageString.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()) {
-                age = ageValue
-            }
-        }
-        // Extract gender
-        if lowerText.contains("male") {
-            gender = "male"
-        } else if lowerText.contains("female") {
-            gender = "female"
-        }
-        // Extract fitness level
-        if lowerText.contains("beginner") {
-            fitnessLevel = "beginner"
-        } else if lowerText.contains("intermediate") {
-            fitnessLevel = "intermediate"
-        } else if lowerText.contains("advanced") {
-            fitnessLevel = "advanced"
-        }
-        // Extract goals (as array)
-        var foundGoals: [String] = []
-        if lowerText.contains("build muscle") || lowerText.contains("muscle") {
-            foundGoals.append("Build Muscle")
-        }
-        if lowerText.contains("lose weight") || lowerText.contains("weight loss") {
-            foundGoals.append("Lose Weight")
-        }
-        if lowerText.contains("maintenance") {
-            foundGoals.append("Maintenance")
-        }
-        if !foundGoals.isEmpty {
-            goals = foundGoals
-        }
-        // Extract equipment (as array)
-        var equipmentList: [String] = []
-        if lowerText.contains("body-weight") || lowerText.contains("bodyweight") {
-            equipmentList.append("Body-weight")
-        }
-        if lowerText.contains("yoga mat") {
-            equipmentList.append("Yoga Mat")
-        }
-        if lowerText.contains("jump rope") {
-            equipmentList.append("Jump Rope")
-        }
-        if !equipmentList.isEmpty {
-            equipment = equipmentList
-        }
-        return "Profile updated! I've extracted: \(goals.isEmpty ? "" : "Goals: \(goals.joined(separator: ", ")), ")\(weight == 0 ? "" : "Weight: \(weight)lbs, ")\(height == 0 ? "" : "Height: \(height)in, ")\(age == 0 ? "" : "Age: \(age), ")\(gender.isEmpty ? "" : "Gender: \(gender), ")\(fitnessLevel.isEmpty ? "" : "Level: \(fitnessLevel), ")\(equipment.isEmpty ? "" : "Equipment: \(equipment.joined(separator: ", "))")"
-    }
-}
-
-// MARK: - HealthKit Manager
-class HealthKitManager: ObservableObject {
-    @Published var isAuthorized = false
-    @Published var biometrics = BiometricData()
-    
-    private let healthStore = HKHealthStore()
-    
-    init() {
-        requestAuthorization()
-    }
-    
-    func requestAuthorization() {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
-        
-        let typesToRead: Set<HKObjectType> = [
-            HKObjectType.quantityType(forIdentifier: .stepCount)!,
-            HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
-            HKObjectType.quantityType(forIdentifier: .heartRate)!,
-            HKObjectType.quantityType(forIdentifier: .dietaryWater)!
-        ]
-        
-        healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
-            DispatchQueue.main.async {
-                self.isAuthorized = success
-                if success {
-                    self.fetchTodayData()
-                }
-            }
-        }
-    }
-    
-    func fetchTodayData() {
-        guard isAuthorized else { return }
-        
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfDay = calendar.startOfDay(for: now)
-        let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
-        
-        fetchSteps(predicate: predicate)
-        fetchCalories(predicate: predicate)
-        fetchDistance(predicate: predicate)
-        fetchHeartRate(predicate: predicate)
-        fetchWater(predicate: predicate)
-    }
-    
-    private func fetchSteps(predicate: NSPredicate) {
-        let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
-        let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            let steps = result?.sumQuantity()?.doubleValue(for: HKUnit.count()) ?? 0
-            DispatchQueue.main.async {
-                self.biometrics.steps = Int(steps)
-            }
-        }
-        healthStore.execute(query)
-    }
-    
-    private func fetchCalories(predicate: NSPredicate) {
-        let calorieType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
-        let query = HKStatisticsQuery(quantityType: calorieType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            let calories = result?.sumQuantity()?.doubleValue(for: HKUnit.kilocalorie()) ?? 0
-            DispatchQueue.main.async {
-                self.biometrics.activeCalories = Int(calories)
-            }
-        }
-        healthStore.execute(query)
-    }
-    
-    private func fetchDistance(predicate: NSPredicate) {
-        let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
-        let query = HKStatisticsQuery(quantityType: distanceType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            let distance = result?.sumQuantity()?.doubleValue(for: HKUnit.meter()) ?? 0
-            DispatchQueue.main.async {
-                self.biometrics.distance = distance / 1000 // Convert to km
-            }
-        }
-        healthStore.execute(query)
-    }
-    
-    private func fetchHeartRate(predicate: NSPredicate) {
-        let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
-        let query = HKStatisticsQuery(quantityType: heartRateType, quantitySamplePredicate: predicate, options: .discreteAverage) { _, result, _ in
-            let heartRate = result?.averageQuantity()?.doubleValue(for: HKUnit(from: "count/min")) ?? 0
-            DispatchQueue.main.async {
-                self.biometrics.heartRate = Int(heartRate)
-            }
-        }
-        healthStore.execute(query)
-    }
-    
-    private func fetchWater(predicate: NSPredicate) {
-        let waterType = HKQuantityType.quantityType(forIdentifier: .dietaryWater)!
-        let query = HKStatisticsQuery(quantityType: waterType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
-            let water = result?.sumQuantity()?.doubleValue(for: HKUnit.liter()) ?? 0
-            DispatchQueue.main.async {
-                self.biometrics.water = water
-            }
-        }
-        healthStore.execute(query)
-    }
-}
-
-// MARK: - Notification Manager
-class NotificationManager: ObservableObject {
-    func requestPermission() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-            print("Notification permission granted: \(granted)")
-        }
-    }
-    
-    func scheduleWorkoutReminder(date: Date) {
-        let content = UNMutableNotificationContent()
-        content.title = "Workout Reminder"
-        content.body = "Time for your workout! 💪"
-        content.sound = .default
-        
-        let triggerDate = Calendar.current.date(byAdding: .minute, value: -15, to: date) ?? date
-        let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate), repeats: false)
-        
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(request)
-    }
-}
-
-// MARK: - Workout Plan Manager
-class WorkoutPlanManager: ObservableObject {
-    @Published var currentPlan: String = ""
-    @Published var showingCalendarPrompt = false
-    
-    func setPlan(_ plan: String) {
-        currentPlan = plan
-        showingCalendarPrompt = true
-    }
-}
-
-// MARK: - Workout Journal
-class WorkoutJournal: ObservableObject {
-    @Published var entries: [WorkoutEntry] = []
-    private let key = "WorkoutJournalEntries"
-    private var entryDict: [String: WorkoutEntry] = [:] // dateKey: entry
-    
-    init() {
-        load()
-    }
-    
-    func entry(for day: Date) -> WorkoutEntry? {
-        let key = Self.dateKey(day)
-        return entryDict[key]
-    }
-    
-    func entry(on date: Date) -> WorkoutEntry? {
-        return entry(for: date)
-    }
-
-    func upsert(_ entry: WorkoutEntry, merge: Bool = true) {
-        let key = Self.dateKey(entry.date)
-        if merge, let existingEntry = entryDict[key] {
-            // Merge exercises
-            var mergedExercises = existingEntry.exercises
-            for newExercise in entry.exercises {
-                if !mergedExercises.contains(where: { $0.name == newExercise.name }) {
-                    mergedExercises.append(newExercise)
-                }
-            }
-            let mergedEntry = WorkoutEntry(
-                date: entry.date,
-                exercises: mergedExercises,
-                notes: entry.notes.isEmpty ? existingEntry.notes : entry.notes,
-                calories: entry.calories > 0 ? entry.calories : existingEntry.calories,
-                type: entry.type.isEmpty ? existingEntry.type : entry.type,
-                duration: entry.duration > 0 ? entry.duration : existingEntry.duration,
-                mood: entry.mood,
-                difficulty: entry.difficulty
-            )
-            entryDict[key] = mergedEntry
-        } else {
-            entryDict[key] = entry
-        }
-        entries = Array(entryDict.values).sorted { $0.date > $1.date }
-        save()
-    }
-
-    func delete(_ entry: WorkoutEntry) {
-        let key = Self.dateKey(entry.date)
-        entryDict.removeValue(forKey: key)
-        entries = Array(entryDict.values).sorted { $0.date > $1.date }
-        save()
-    }
-    
-    func addEntry(_ entry: WorkoutEntry) {
-        upsert(entry)
-    }
-    
-    private func save() {
-        let data = try? JSONEncoder().encode(Array(entryDict.values))
-        UserDefaults.standard.set(data, forKey: key)
-    }
-    
-    private func load() {
-        if let data = UserDefaults.standard.data(forKey: key),
-           let arr = try? JSONDecoder().decode([WorkoutEntry].self, from: data) {
-            entryDict = Dictionary(uniqueKeysWithValues: arr.map { (Self.dateKey($0.date), $0) })
-            entries = arr.sorted { $0.date > $1.date }
-        }
-    }
-
-    static func dateKey(_ date: Date) -> String {
-        let c = Calendar.current
-        let comps = c.dateComponents([.year, .month, .day], from: date)
-        return String(format: "%04d-%02d-%02d", comps.year ?? 0, comps.month ?? 0, comps.day ?? 0)
-    }
-}
-
-struct WorkoutEntry: Identifiable, Codable {
-    var id: UUID = UUID()
-    var date: Date
-    var exercises: [ExerciseItem]
-    var notes: String = ""
-    var calories: Int = 0
-    var type: String = ""
-    var duration: Int = 0
-    var mood: Mood = .good
-    var difficulty: Difficulty = .moderate
-    
-    init(date: Date, exercises: [ExerciseItem] = [], notes: String = "", calories: Int = 0, type: String = "", duration: Int = 0, mood: Mood = .good, difficulty: Difficulty = .moderate) {
-        self.date = date
-        self.exercises = exercises
-        self.notes = notes
-        self.calories = calories
-        self.type = type
-        self.duration = duration
-        self.mood = mood
-        self.difficulty = difficulty
-    }
-}
-
-struct ExerciseItem: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var name: String
-    var sets: Int
-    var reps: Int
-    var weight: Double?
-    var duration: Int?
-    var isCompleted: Bool = false
-}
-
-enum Mood: String, CaseIterable, Codable {
-    case great = "Great"
-    case good = "Good"
-    case okay = "Okay"
-    case tired = "Tired"
-}
-
-enum Difficulty: String, CaseIterable, Codable {
-    case easy = "Easy"
-    case moderate = "Moderate"
-    case hard = "Hard"
-}
-
-struct Profile: Codable {
-    var name: String
-    let age: Int
-    let height: Int
-    let weight: Int
-    let gender: String
-    let fitnessLevel: String
-    let equipment: [String]
-    let goals: [String]
-}
-
-class GPTService: ObservableObject {
-    @Published var messages: [ChatMessage] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private let model: GenerativeModel
-    
-    init() {
-        let apiKey = "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
-        model = GenerativeModel(name: "gemini-1.5-flash-latest", apiKey: apiKey)
-    }
-    
-    func sendMessage(_ content: String) async {
-        let userMessage = ChatMessage(id: UUID(), content: content, isUser: true, timestamp: Date())
-        
-        await MainActor.run {
-            messages.append(userMessage)
-            isLoading = true
-            errorMessage = nil
-        }
-        
-        do {
-            let response = try await model.generateContent(content)
-            let assistantMessage = ChatMessage(id: UUID(), content: response.text ?? "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
-            
-            await MainActor.run {
-                messages.append(assistantMessage)
-                isLoading = false
-            }
-        } catch {
-            let errorMessage = ChatMessage(id: UUID(), content: "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
-            
-            await MainActor.run {
-                messages.append(errorMessage)
-                isLoading = false
-            }
-        }
-    }
-    
-    func generateWorkoutPlan(profile: Profile) async -> String {
-        let prompt = """
-        Create a personalized workout plan for \(profile.name) with the following details:
-        - Age: \(profile.age)
-        - Height: \(profile.height) cm
-        - Weight: \(profile.weight) kg
-        - Gender: \(profile.gender)
-        - Fitness Level: \(profile.fitnessLevel)
-        - Equipment: \(profile.equipment.joined(separator: ", "))
-        - Goals: \(profile.goals.joined(separator: ", "))
-        
-        Rules:
-        1. Use ONLY body-weight exercises unless specific equipment is listed
-        2. No dumbbells or heavy weights unless explicitly mentioned
-        3. Create a 3-day plan with clear day sections
-        4. Include sets, reps, and rest periods
-        5. Format as readable text, not JSON
-        6. Keep it beginner-friendly and safe
-        """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            return response.text ?? "Sorry, I couldn't generate a workout plan right now."
-        } catch {
-            return "Sorry, I couldn't generate a workout plan right now."
-        }
-    }
-    
-    func clearMessages() {
-        messages.removeAll()
-    }
-    
-    func generateRoutine(prompt: String) async -> String {
-        do {
-            print("Sending prompt to Gemini API...") // Debug: Log API call
-            let response = try await model.generateContent(prompt)
-            print("Received response from Gemini API") // Debug: Log successful response
-            if let text = response.text {
-                return text
-            }
-            print("No text in response") // Debug: Log empty response
-            return "I apologize, but I couldn't generate a response. Please try again."
-        } catch {
-            print("Detailed error: \(error)") // Debug: Log detailed error
-            let nsError = error as NSError
-            print("Error domain: \(nsError.domain)")
-            print("Error code: \(nsError.code)")
-            print("Error description: \(nsError.localizedDescription)")
-            print("Error user info: \(nsError.userInfo)")
-            
-            // Return a more specific error message based on the error
-            if nsError.domain == "GoogleGenerativeAI.GenerateContentError" {
-                return "I apologize, but there seems to be an issue with the AI service configuration. Please try again later."
-            }
-            return "I apologize, but I'm having trouble connecting to the AI service. Please check your internet connection and try again."
-        }
-    }
-}
-
-class CalendarManager: ObservableObject {
-    private let store = EKEventStore()
-    
-    init() {
-        requestAccess()
-    }
-    
-    private func requestAccess() {
-        // Request calendar access with proper error handling using new iOS 17+ API
-        if #available(iOS 17.0, *) {
-            store.requestFullAccessToEvents { granted, error in
-                if let error = error {
-                    print("Error requesting calendar access: \(error)")
-                }
-                if !granted {
-                    print("Calendar access not granted")
-                }
-            }
-        } else {
-            // Fallback for older iOS versions
-            store.requestAccess(to: .event) { granted, error in
-                if let error = error {
-                    print("Error requesting calendar access: \(error)")
-                }
-                if !granted {
-                    print("Calendar access not granted")
-                }
-            }
-        }
-    }
-    
-    func addWorkout(title: String, offsetMinutes: Double) throws {
-        // Check calendar authorization status using new iOS 17+ API
-        let status: EKAuthorizationStatus
-        if #available(iOS 17.0, *) {
-            status = EKEventStore.authorizationStatus(for: .event)
-        } else {
-            status = EKEventStore.authorizationStatus(for: .event)
-        }
-        
-        guard status == .fullAccess else {
-            throw NSError(domain: "CalendarError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Calendar access not authorized"])
-        }
-        
-        guard let cal = store.defaultCalendarForNewEvents else {
-            throw NSError(domain: "CalendarError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No default calendar found"])
-        }
-        
-        let event = EKEvent(eventStore: store)
-        event.calendar = cal
-        event.title = title
-        event.startDate = Date().addingTimeInterval(offsetMinutes*60)
-        event.endDate = event.startDate.addingTimeInterval(60*60)
-        try store.save(event, span: .thisEvent)
+        return Path(path.cgPath)
     }
 }
