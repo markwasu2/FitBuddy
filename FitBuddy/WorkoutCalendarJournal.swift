@@ -111,7 +111,7 @@ struct CalendarGrid: View {
 struct DailyWorkoutView: View {
     @EnvironmentObject var workoutJournal: WorkoutJournal
     let date: Date
-    @State private var entry: WorkoutEntry = WorkoutEntry(date: Date(), exercises: [], type: "", duration: 0, mood: .good, difficulty: .moderate)
+    @State private var entry: WorkoutEntry = WorkoutEntry(date: Date(), exercises: [], type: "", duration: 0, mood: "good", difficulty: "moderate")
     @State private var showPicker = false
     @State private var showSaved = false
     @State private var progress: Double = 0
@@ -174,7 +174,7 @@ struct DailyWorkoutView: View {
             if let e = workoutJournal.entry(for: date) {
                 entry = e
             } else {
-                entry = WorkoutEntry(date: date, exercises: [], type: "", duration: 0, mood: .good, difficulty: .moderate)
+                entry = WorkoutEntry(date: date, exercises: [], type: "", duration: 0, mood: "good", difficulty: "moderate")
             }
             updateProgress()
         }
@@ -200,7 +200,7 @@ struct ChecklistCard: View {
             ForEach($entry.exercises) { $ex in
                 HStack {
                     Toggle(isOn: $ex.isCompleted) {
-                        Text("\(ex.name) \(ex.sets) × \(ex.reps)" + (ex.weight != nil ? " @ \(Int(ex.weight!)) lb" : "") + (ex.duration != nil ? " for \(ex.duration!)s" : ""))
+                        Text("\(ex.name)")
                             .font(.body)
                             .foregroundColor(.textPrimary)
                     }
@@ -258,13 +258,13 @@ struct ExercisePickerSheet: View {
     @State private var search: String = ""
     @State private var tempSelected: Set<ExerciseItem> = []
     let allExercises: [ExerciseItem] = [
-        ExerciseItem(name: "Bench Press", sets: 4, reps: 10, weight: 135, duration: nil),
-        ExerciseItem(name: "Squat", sets: 4, reps: 8, weight: 185, duration: nil),
-        ExerciseItem(name: "Deadlift", sets: 3, reps: 5, weight: 225, duration: nil),
-        ExerciseItem(name: "Push Ups", sets: 3, reps: 15, weight: nil, duration: nil),
-        ExerciseItem(name: "Plank", sets: 3, reps: 1, weight: nil, duration: 60),
-        ExerciseItem(name: "Running", sets: 1, reps: 1, weight: nil, duration: 900),
-        ExerciseItem(name: "Yoga", sets: 1, reps: 1, weight: nil, duration: 1800),
+        ExerciseItem(name: "Bench Press"),
+        ExerciseItem(name: "Squat"),
+        ExerciseItem(name: "Deadlift"),
+        ExerciseItem(name: "Push Ups"),
+        ExerciseItem(name: "Plank"),
+        ExerciseItem(name: "Running"),
+        ExerciseItem(name: "Yoga"),
     ]
     var filtered: [ExerciseItem] {
         if search.isEmpty { return allExercises }
@@ -291,7 +291,7 @@ struct ExercisePickerSheet: View {
                                 HStack {
                                     Image(systemName: tempSelected.contains(ex) ? "checkmark.square.fill" : "square")
                                         .foregroundColor(tempSelected.contains(ex) ? .accentBlue : .glyphGray)
-                                    Text("\(ex.name) \(ex.sets) × \(ex.reps)" + (ex.weight != nil ? " @ \(Int(ex.weight!)) lb" : "") + (ex.duration != nil ? " for \(ex.duration!)s" : ""))
+                                    Text(ex.name)
                                         .font(.body)
                                         .foregroundColor(.textPrimary)
                                     Spacer()
@@ -308,22 +308,21 @@ struct ExercisePickerSheet: View {
                     selected.append(contentsOf: tempSelected.filter { !selected.contains($0) })
                     dismiss()
                 }) {
-                    Text("Add \(tempSelected.count) Exercise\(tempSelected.count == 1 ? "" : "s")")
+                    Text("Add Selected")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(tempSelected.isEmpty ? Color.glyphGray : Color.accentBlue)
+                        .background(Color.accentBlue)
                         .cornerRadius(14)
                 }
-                .disabled(tempSelected.isEmpty)
                 .padding()
             }
             .navigationTitle("Add Exercise")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Done") { dismiss() }
                 }
             }
         }
