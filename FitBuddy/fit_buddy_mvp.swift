@@ -24,26 +24,21 @@ struct FitBuddyApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     @StateObject private var profileManager = ProfileManager()
     @StateObject private var gptService = GPTService()
-    @StateObject private var activityTracker = ActivityTracker()
-    @StateObject private var chatMemoryManager = ChatMemoryManager()
-    @StateObject private var workoutSessionManager = WorkoutSessionManager()
+    @StateObject private var workoutPlanManager = WorkoutPlanManager()
+    @StateObject private var workoutJournal = WorkoutJournal()
     @StateObject private var healthKitManager = HealthKitManager()
+    @StateObject private var notificationManager = NotificationManager()
     
     var body: some Scene {
         WindowGroup {
             RootView()
                 .environmentObject(profileManager)
                 .environmentObject(gptService)
-                .environmentObject(activityTracker)
-                .environmentObject(chatMemoryManager)
-                .environmentObject(workoutSessionManager)
+                .environmentObject(workoutPlanManager)
+                .environmentObject(workoutJournal)
                 .environmentObject(healthKitManager)
-                .onAppear {
-                    // Connect services
-                    profileManager.setGPTService(gptService)
-                    workoutSessionManager.setActivityTracker(activityTracker)
-                    chatMemoryManager.setActivityTracker(activityTracker)
-                }
+                .environmentObject(notificationManager)
+                .preferredColorScheme(.light)
         }
     }
 }
@@ -80,7 +75,7 @@ extension Color {
 
 // MARK: - Basic Models
 struct WorkoutPlan: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let title: String
     let description: String
     let exercises: [Exercise]
@@ -95,7 +90,7 @@ struct WorkoutPlan: Codable, Identifiable {
 }
 
 struct Exercise: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let name: String
     let sets: Int
     let reps: Int
@@ -120,7 +115,7 @@ struct Exercise: Codable, Identifiable {
 }
 
 struct ScheduledWorkout: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let workoutPlan: WorkoutPlan
     let scheduledDate: Date
     let eventID: String?
@@ -137,7 +132,7 @@ struct ScheduledWorkout: Codable, Identifiable {
 
 // MARK: - Biometric Data Models
 struct HealthKitWorkout: Codable, Identifiable {
-    let id: String
+    var id: String
     let workoutTitle: String
     let startTime: Date
     let endTime: Date
@@ -155,31 +150,16 @@ struct HealthKitWorkout: Codable, Identifiable {
     }
 }
 
-struct BiometricData: Codable {
-    let date: Date
-    let steps: Int
-    let caloriesBurned: Double
-    let activeCalories: Double
-    let distance: Double // in meters
-    let heartRate: Double?
-    let workouts: [HealthKitWorkout]
-    
-    var formattedSteps: String {
-        return "\(steps) steps"
-    }
-    
-    var formattedDistance: String {
-        let miles = distance * 0.000621371
-        return String(format: "%.1f mi", miles)
-    }
-    
-    var formattedCalories: String {
-        return String(format: "%.0f cal", caloriesBurned)
-    }
+struct BiometricData {
+    var steps: Int = 0
+    var activeCalories: Int = 0
+    var distance: Double = 0.0
+    var heartRate: Int = 0
+    var water: Double = 0.0
 }
 
 struct WorkoutJournalEntry: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let date: Date
     let workoutTitle: String
     let duration: TimeInterval
@@ -195,7 +175,7 @@ struct WorkoutJournalEntry: Codable, Identifiable {
 }
 
 struct CompletedExercise: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let name: String
     let sets: Int
     let reps: Int
@@ -243,7 +223,7 @@ class ActivityTracker: ObservableObject {
 }
 
 struct ActivityItem: Codable, Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let type: String
     let value: String
     let timestamp: Date
@@ -275,20 +255,15 @@ class ChatMemoryManager: ObservableObject {
     }
 }
 
-struct ChatMessage: Codable, Identifiable {
-    let id = UUID()
+struct ChatMessage: Identifiable {
+    var id: UUID = UUID()
     let content: String
     let isUser: Bool
     let timestamp: Date
-    let type: MessageType
-    
-    enum MessageType: String, Codable {
-        case text, workout, progress, goal
-    }
 }
 
 struct UserProfile: Codable {
-    let name: String
+    var name: String
     let age: Int
     let weight: Int
     let height: Int
@@ -300,34 +275,33 @@ struct UserProfile: Codable {
 // MARK: - Onboarding
 struct OnboardingView: View {
     @EnvironmentObject var profileManager: ProfileManager
-    @State private var name: String = ""
-    @State private var age: String = ""
-    @State private var weight: String = ""
-    @State private var height: String = ""
-    @State private var fitnessLevel: String = ""
-    @State private var equipment: String = ""
     @State private var currentStep = 0
+    @State private var name = ""
+    @State private var age = ""
+    @State private var height = ""
+    @State private var weight = ""
+    @State private var selectedGender = ""
+    @State private var selectedFitnessLevel = ""
+    @State private var selectedEquipment: Set<String> = []
+    @State private var selectedGoals: Set<String> = []
     
-    private let totalSteps = 8
+    private let totalSteps = 7
     
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
-                // Progress indicator
                 ProgressView(value: Double(currentStep), total: Double(totalSteps - 1))
                     .progressViewStyle(LinearProgressViewStyle(tint: .blue))
                     .padding(.horizontal)
                 
-                // Step content
                 stepContent
                 
                 Spacer()
                 
-                // Navigation buttons
                 navigationButtons
             }
             .padding()
-            .navigationTitle("Welcome to FitBuddy")
+            .navigationTitle("Welcome to Moki")
             .navigationBarTitleDisplayMode(.large)
         }
     }
@@ -338,19 +312,17 @@ struct OnboardingView: View {
         case 0:
             welcomeStep
         case 1:
-            nameStep
+            nameAgeStep
         case 2:
-            ageStep
+            heightWeightStep
         case 3:
-            weightStep
+            genderStep
         case 4:
-            heightStep
-        case 5:
-            goalsStep
-        case 6:
             fitnessLevelStep
-        case 7:
+        case 5:
             equipmentStep
+        case 6:
+            goalsStep
         default:
             EmptyView()
         }
@@ -362,37 +334,29 @@ struct OnboardingView: View {
                 .font(.system(size: 80))
                 .foregroundColor(.blue)
             
-            Text("Welcome to FitBuddy!")
+            Text("Welcome to Moki!")
                 .font(.largeTitle)
                 .bold()
             
             Text("Your AI-powered fitness companion")
                 .font(.title2)
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
             
             Text("Let's create your personalized fitness profile to get started with customized workout plans and expert guidance.")
                 .multilineTextAlignment(.center)
-                .foregroundColor(.secondary)
+                .foregroundColor(.gray)
         }
     }
     
-    private var nameStep: some View {
+    private var nameAgeStep: some View {
         VStack(spacing: 20) {
-            Text("What's your name?")
+            Text("Tell us about yourself")
                 .font(.title)
                 .bold()
             
-            TextField("Enter your name", text: $name)
+            TextField("Name", text: $name)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .font(.title2)
-        }
-    }
-    
-    private var ageStep: some View {
-        VStack(spacing: 20) {
-            Text("How old are you?")
-                .font(.title)
-                .bold()
             
             TextField("Age", text: $age)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -401,113 +365,103 @@ struct OnboardingView: View {
         }
     }
     
-    private var weightStep: some View {
+    private var heightWeightStep: some View {
         VStack(spacing: 20) {
-            Text("What's your weight?")
+            Text("Your measurements")
                 .font(.title)
                 .bold()
             
             HStack {
-                TextField("Weight", text: $weight)
+                TextField("Height (cm)", text: $height)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
                     .font(.title2)
                 
-                Text("lbs")
-                    .font(.title2)
-                    .foregroundColor(.secondary)
-            }
-        }
-    }
-    
-    private var heightStep: some View {
-        VStack(spacing: 20) {
-            Text("What's your height?")
-                .font(.title)
-                .bold()
-            
-            HStack {
-                TextField("Height", text: $height)
+                TextField("Weight (kg)", text: $weight)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
                     .keyboardType(.numberPad)
                     .font(.title2)
-                
-                Text("inches")
-                    .font(.title2)
-                    .foregroundColor(.secondary)
             }
         }
     }
     
-    private var goalsStep: some View {
+    private var genderStep: some View {
         VStack(spacing: 20) {
-            Text("What are your fitness goals?")
+            Text("Gender")
                 .font(.title)
                 .bold()
             
             VStack(spacing: 15) {
-                GoalButton(title: "Lose Weight", isSelected: profileManager.selectedGoals.contains("Lose Weight")) {
-                    toggleGoal("Lose Weight")
-                }
+                Button("Male") { selectedGender = "Male" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedGender == "Male"))
                 
-                GoalButton(title: "Build Muscle", isSelected: profileManager.selectedGoals.contains("Build Muscle")) {
-                    toggleGoal("Build Muscle")
-                }
+                Button("Female") { selectedGender = "Female" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedGender == "Female"))
                 
-                GoalButton(title: "Improve Cardio", isSelected: profileManager.selectedGoals.contains("Improve Cardio")) {
-                    toggleGoal("Improve Cardio")
-                }
-                
-                GoalButton(title: "Increase Strength", isSelected: profileManager.selectedGoals.contains("Increase Strength")) {
-                    toggleGoal("Increase Strength")
-                }
-                
-                GoalButton(title: "Maintain Fitness", isSelected: profileManager.selectedGoals.contains("Maintain Fitness")) {
-                    toggleGoal("Maintain Fitness")
-                }
+                Button("Other") { selectedGender = "Other" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedGender == "Other"))
             }
         }
     }
     
     private var fitnessLevelStep: some View {
         VStack(spacing: 20) {
-            Text("What's your fitness level?")
+            Text("Fitness Level")
                 .font(.title)
                 .bold()
             
             VStack(spacing: 15) {
-                FitnessLevelButton(title: "Beginner", description: "New to fitness or getting back into it", isSelected: fitnessLevel == "beginner") {
-                    fitnessLevel = "beginner"
-                }
+                Button("Beginner") { selectedFitnessLevel = "Beginner" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedFitnessLevel == "Beginner"))
                 
-                FitnessLevelButton(title: "Intermediate", description: "Regular exercise routine", isSelected: fitnessLevel == "intermediate") {
-                    fitnessLevel = "intermediate"
-                }
+                Button("Intermediate") { selectedFitnessLevel = "Intermediate" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedFitnessLevel == "Intermediate"))
                 
-                FitnessLevelButton(title: "Advanced", description: "Experienced with fitness", isSelected: fitnessLevel == "advanced") {
-                    fitnessLevel = "advanced"
-                }
+                Button("Advanced") { selectedFitnessLevel = "Advanced" }
+                    .buttonStyle(SelectionButtonStyle(isSelected: selectedFitnessLevel == "Advanced"))
             }
         }
     }
     
     private var equipmentStep: some View {
         VStack(spacing: 20) {
-            Text("What equipment do you have?")
+            Text("Available Equipment")
                 .font(.title)
                 .bold()
             
             VStack(spacing: 15) {
-                EquipmentButton(title: "None", description: "Bodyweight exercises only", isSelected: equipment == "none") {
-                    equipment = "none"
+                EquipmentButton(title: "Body-weight", isSelected: selectedEquipment.contains("Body-weight")) {
+                    toggleEquipment("Body-weight")
                 }
                 
-                EquipmentButton(title: "Resistance Bands", description: "Portable and versatile", isSelected: equipment == "resistance bands") {
-                    equipment = "resistance bands"
+                EquipmentButton(title: "Yoga Mat", isSelected: selectedEquipment.contains("Yoga Mat")) {
+                    toggleEquipment("Yoga Mat")
                 }
                 
-                EquipmentButton(title: "Basic Home Gym", description: "Some weights and equipment", isSelected: equipment == "basic home gym") {
-                    equipment = "basic home gym"
+                EquipmentButton(title: "Jump Rope", isSelected: selectedEquipment.contains("Jump Rope")) {
+                    toggleEquipment("Jump Rope")
+                }
+            }
+        }
+    }
+    
+    private var goalsStep: some View {
+        VStack(spacing: 20) {
+            Text("Your Goals")
+                .font(.title)
+                .bold()
+            
+            VStack(spacing: 15) {
+                GoalButton(title: "Lose Weight", isSelected: selectedGoals.contains("Lose Weight")) {
+                    toggleGoal("Lose Weight")
+                }
+                
+                GoalButton(title: "Build Muscle", isSelected: selectedGoals.contains("Build Muscle")) {
+                    toggleGoal("Build Muscle")
+                }
+                
+                GoalButton(title: "Maintenance", isSelected: selectedGoals.contains("Maintenance")) {
+                    toggleGoal("Maintenance")
                 }
             }
         }
@@ -539,36 +493,80 @@ struct OnboardingView: View {
     private var canProceed: Bool {
         switch currentStep {
         case 0: return true
-        case 1: return !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        case 2: return !age.isEmpty
-        case 3: return !weight.isEmpty
-        case 4: return !height.isEmpty
-        case 5: return !profileManager.selectedGoals.isEmpty
-        case 6: return !fitnessLevel.isEmpty
-        case 7: return !equipment.isEmpty
+        case 1: return !name.isEmpty && !age.isEmpty
+        case 2: return !height.isEmpty && !weight.isEmpty
+        case 3: return !selectedGender.isEmpty
+        case 4: return !selectedFitnessLevel.isEmpty
+        case 5: return !selectedEquipment.isEmpty
+        case 6: return !selectedGoals.isEmpty
         default: return false
         }
     }
     
-    private func toggleGoal(_ goal: String) {
-        if profileManager.selectedGoals.contains(goal) {
-            profileManager.selectedGoals.removeAll { $0 == goal }
+    private func toggleEquipment(_ equipment: String) {
+        if selectedEquipment.contains(equipment) {
+            selectedEquipment.remove(equipment)
         } else {
-            profileManager.selectedGoals.append(goal)
+            selectedEquipment.insert(equipment)
+        }
+    }
+    
+    private func toggleGoal(_ goal: String) {
+        if selectedGoals.contains(goal) {
+            selectedGoals.remove(goal)
+        } else {
+            selectedGoals.insert(goal)
         }
     }
     
     private func completeOnboarding() {
-        // Save all profile data
-        profileManager.userName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        profileManager.name = name
         profileManager.age = Int(age) ?? 25
-        profileManager.weight = Int(weight) ?? 150
-        profileManager.height = Int(height) ?? 70
-        profileManager.fitnessLevel = fitnessLevel
-        profileManager.equipment = equipment
+        profileManager.height = Int(height) ?? 170
+        profileManager.weight = Int(weight) ?? 70
+        profileManager.gender = selectedGender
+        profileManager.fitnessLevel = selectedFitnessLevel
+        profileManager.equipment = Array(selectedEquipment)
+        profileManager.goals = Array(selectedGoals)
         
-        // Mark onboarding as complete and save to UserDefaults
         profileManager.completeOnboarding()
+    }
+}
+
+struct SelectionButtonStyle: ButtonStyle {
+    let isSelected: Bool
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(isSelected ? Color.blue : Color.gray.opacity(0.1))
+            .foregroundColor(isSelected ? .white : .black)
+            .cornerRadius(12)
+    }
+}
+
+struct EquipmentButton: View {
+    let title: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                    .font(.headline)
+                Spacer()
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding()
+            .background(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
@@ -590,67 +588,7 @@ struct GoalButton: View {
             }
             .padding()
             .background(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-            .cornerRadius(10)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct FitnessLevelButton: View {
-    let title: String
-    let description: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(title)
-                        .font(.headline)
-                    Spacer()
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.blue)
-                    }
-                }
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-            .cornerRadius(10)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct EquipmentButton: View {
-    let title: String
-    let description: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 5) {
-                HStack {
-                    Text(title)
-                        .font(.headline)
-                    Spacer()
-                    if isSelected {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundColor(.blue)
-                    }
-                }
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding()
-            .background(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
-            .cornerRadius(10)
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
     }
@@ -673,7 +611,6 @@ struct MainTabView: View {
 // MARK: ‑ Home
 struct HomeView: View {
     @State private var streak: Int = 0
-    @AppStorage("userGoal") private var goal: String = ""
     @AppStorage("userWeight") private var weight: String = ""
     @AppStorage("userHeight") private var height: String = ""
     @AppStorage("userAge") private var age: String = ""
@@ -708,7 +645,6 @@ struct HomeView: View {
                         .bold()
                     
                     ProfileRow(title: "Name", value: userName.isEmpty ? "Not set" : userName)
-                    ProfileRow(title: "Goal", value: goal.isEmpty ? "Not set" : goal)
                     ProfileRow(title: "Weight", value: weight.isEmpty ? "Not set" : "\(weight) lbs")
                     ProfileRow(title: "Height", value: height.isEmpty ? "Not set" : "\(height) inches")
                     ProfileRow(title: "Age", value: age.isEmpty ? "Not set" : "\(age) years")
@@ -756,7 +692,6 @@ struct HomeView: View {
     
     private func resetProfile() {
         userName = ""
-        goal = ""
         weight = ""
         height = ""
         age = ""
@@ -883,7 +818,7 @@ struct ChatbotView: View {
     }
     
     private func startOnboardingIfNeeded() {
-        if !profileManager.isOnboardingComplete || profileManager.userName.isEmpty {
+        if !profileManager.isOnboardingComplete || profileManager.name.isEmpty {
             isOnboarding = true
             onboardingStep = 0
             messages = []
@@ -891,7 +826,7 @@ struct ChatbotView: View {
         } else {
             isOnboarding = false
             if messages.isEmpty {
-                messages = [ChatBubble(text: "Hi \(profileManager.userName)! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
+                messages = [ChatBubble(text: "Hi \(profileManager.name)! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
             }
         }
     }
@@ -905,8 +840,8 @@ struct ChatbotView: View {
         
         switch onboardingStep {
         case 0: // Name
-            profileManager.userName = userResponse
-            messages.append(ChatBubble(text: "Nice to meet you, \(profileManager.userName)! 😊\n\nHow old are you?", isUser: false))
+            profileManager.name = userResponse
+            messages.append(ChatBubble(text: "Nice to meet you, \(profileManager.name)! ��\n\nHow old are you?", isUser: false))
             onboardingStep = 1
             
         case 1: // Age
@@ -965,15 +900,15 @@ struct ChatbotView: View {
         case 4: // Goal
             let lowerResponse = userResponse.lowercased()
             if lowerResponse.contains("lose") || lowerResponse.contains("weight") {
-                profileManager.goal = "lose weight"
+                profileManager.goals = ["Lose Weight"]
             } else if lowerResponse.contains("build") || lowerResponse.contains("muscle") {
-                profileManager.goal = "build muscle"
+                profileManager.goals = ["Build Muscle"]
             } else if lowerResponse.contains("cardio") || lowerResponse.contains("endurance") {
-                profileManager.goal = "improve cardio"
+                profileManager.goals = ["Improve Cardio"]
             } else if lowerResponse.contains("general") || lowerResponse.contains("fitness") {
-                profileManager.goal = "general fitness"
+                profileManager.goals = ["General Fitness"]
             } else {
-                profileManager.goal = userResponse
+                profileManager.goals = [userResponse]
             }
             
             messages.append(ChatBubble(text: "Excellent! What equipment do you have available?\n\nChoose one:\n• None (bodyweight only)\n• Resistance bands\n• Basic home gym\n• Full gym access\n• Other (tell me more)", isUser: false))
@@ -982,15 +917,15 @@ struct ChatbotView: View {
         case 5: // Equipment
             let lowerResponse = userResponse.lowercased()
             if lowerResponse.contains("none") || lowerResponse.contains("bodyweight") {
-                profileManager.equipment = "none"
+                profileManager.equipment = ["Body-weight"]
             } else if lowerResponse.contains("resistance") || lowerResponse.contains("bands") {
-                profileManager.equipment = "resistance bands"
+                profileManager.equipment = ["Resistance Bands"]
             } else if lowerResponse.contains("home gym") || lowerResponse.contains("basic") {
-                profileManager.equipment = "basic home gym"
+                profileManager.equipment = ["Basic Home Gym"]
             } else if lowerResponse.contains("full gym") || lowerResponse.contains("gym access") {
-                profileManager.equipment = "full gym"
+                profileManager.equipment = ["Full Gym Access"]
             } else {
-                profileManager.equipment = userResponse
+                profileManager.equipment = [userResponse]
             }
             
             messages.append(ChatBubble(text: "Perfect! Finally, what's your fitness level?\n\nChoose one:\n• Beginner (new to fitness)\n• Intermediate (regular exercise)\n• Advanced (experienced)", isUser: false))
@@ -1008,24 +943,20 @@ struct ChatbotView: View {
                 profileManager.fitnessLevel = "beginner" // Default
             }
             
-            // Calculate BMI
-            profileManager.calculateBMI()
-            
             // Complete onboarding
             profileManager.completeOnboarding()
             isOnboarding = false
             
             let welcomeMessage = """
-            🎉 Perfect! Your profile is complete, \(profileManager.userName)!
+            🎉 Perfect! Your profile is complete, \(profileManager.name)!
             
             📊 Your Profile:
             • Age: \(profileManager.age) years
             • Weight: \(profileManager.weight) lbs
             • Height: \(profileManager.height) inches
-            • BMI: \(profileManager.bmi)
-            • Goal: \(profileManager.goal)
-            • Equipment: \(profileManager.equipment)
             • Level: \(profileManager.fitnessLevel.capitalized)
+            • Goal: \(profileManager.goals.joined(separator: ", "))
+            • Equipment: \(profileManager.equipment.joined(separator: ", "))
             
             I'm ready to create personalized workout plans just for you! 
             
@@ -1066,15 +997,14 @@ struct ChatbotView: View {
         You are FitBuddy, an expert fitness coach and personal trainer. Generate CONCISE, SPECIFIC, and ACTIONABLE responses.
 
         USER PROFILE:
-        - Name: \(profileManager.userName)
-        - Goal: \(profileManager.goal)
-        - Equipment: \(profileManager.equipment)
+        - Name: \(profileManager.name)
+        - Goal: \(profileManager.goals.joined(separator: ", "))
+        - Equipment: \(profileManager.equipment.joined(separator: ", "))
         - Weight: \(profileManager.weight) lbs
         - Height: \(profileManager.height) inches
         - Age: \(profileManager.age) years
         - Gender: \(profileManager.gender)
         - Fitness Level: \(profileManager.fitnessLevel)
-        - BMI: \(profileManager.bmi)
         - Question: \(userMessage)
 
         INSTRUCTIONS:
@@ -1084,7 +1014,7 @@ struct ChatbotView: View {
         4. Adapt exercises to their fitness level
         5. Account for age, gender, and BMI in recommendations
         6. If they ask about updating their profile, suggest they say "Update my profile" followed by their details
-        7. Use their name \(profileManager.userName) in responses to make it personal
+        7. Use their name \(profileManager.name) in responses to make it personal
 
         WORKOUT PLAN FORMAT (if requested):
         🏋️ **PERSONALIZED WORKOUT PLAN**
@@ -1127,7 +1057,7 @@ struct ChatbotView: View {
 }
 
 struct ChatBubble: Identifiable {
-    let id = UUID()
+    var id: UUID = UUID()
     let text: String
     let isUser: Bool
     
@@ -1151,38 +1081,12 @@ class GPTService: ObservableObject {
     private let model: GenerativeModel
     
     init() {
-        // Get API key from environment variable
-        let apiKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] ?? ""
-        print("API Key length: \(apiKey.count)") // Debug: Check if API key is present
-        print("API Key starts with: \(String(apiKey.prefix(10)))") // Debug: Check first 10 chars
-        print("API Key ends with: \(String(apiKey.suffix(10)))") // Debug: Check last 10 chars
-        
-        // Clean up the API key - remove any extra whitespace or quotes
-        let cleanedApiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "\"", with: "")
-        
-        // TEMPORARY: Use hardcoded API key for testing
-        let finalApiKey = "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
-        
-        guard !finalApiKey.isEmpty else {
-            fatalError("GEMINI_API_KEY environment variable is not set")
-        }
-        
-        guard finalApiKey.hasPrefix("AIza") else {
-            fatalError("GEMINI_API_KEY does not start with 'AIza' - invalid key format")
-        }
-        
-        print("Using API Key length: \(finalApiKey.count)")
-        
-        // Use gemini-1.5-flash-latest which is available in the API
-        model = GenerativeModel(name: "gemini-1.5-flash-latest", apiKey: finalApiKey, generationConfig: GenerationConfig(
-            temperature: 0.7,
-            topP: 0.8,
-            topK: 40
-        ))
+        let apiKey = "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
+        model = GenerativeModel(name: "gemini-1.5-flash-latest", apiKey: apiKey)
     }
     
     func sendMessage(_ content: String) async {
-        let userMessage = ChatMessage(content: content, isUser: true, timestamp: Date(), type: .text)
+        let userMessage = ChatMessage(content: content, isUser: true, timestamp: Date())
         
         await MainActor.run {
             messages.append(userMessage)
@@ -1191,48 +1095,49 @@ class GPTService: ObservableObject {
         }
         
         do {
-            let response = try await generateResponse(for: content)
-            let aiMessage = ChatMessage(content: response, isUser: false, timestamp: Date(), type: .text)
+            let response = try await model.generateContent(content)
+            let assistantMessage = ChatMessage(content: response.text ?? "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
             
             await MainActor.run {
-                messages.append(aiMessage)
+                messages.append(assistantMessage)
                 isLoading = false
             }
         } catch {
+            let errorMessage = ChatMessage(content: "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
+            
             await MainActor.run {
-                errorMessage = "Failed to get response: \(error.localizedDescription)"
+                messages.append(errorMessage)
                 isLoading = false
             }
         }
     }
     
-    private func generateResponse(for message: String) async throws -> String {
-        let prompt = createPrompt(for: message)
-        let response = try await model.generateContent(prompt)
-        return response.text ?? "I'm sorry, I couldn't generate a response."
-    }
-    
-    private func createPrompt(for message: String) -> String {
-        return """
-        You are Moki, a friendly and professional AI fitness coach for FitBuddy. You help users with:
-        - Creating personalized workout plans
-        - Providing fitness advice and motivation
-        - Tracking progress and goals
-        - Scheduling workouts in their calendar
+    func generateWorkoutPlan(profile: Profile) async -> String {
+        let prompt = """
+        Create a personalized workout plan for \(profile.name) with the following details:
+        - Age: \(profile.age)
+        - Height: \(profile.height) cm
+        - Weight: \(profile.weight) kg
+        - Gender: \(profile.gender)
+        - Fitness Level: \(profile.fitnessLevel)
+        - Equipment: \(profile.equipment.joined(separator: ", "))
+        - Goals: \(profile.goals.joined(separator: ", "))
         
-        Guidelines:
-        - Be conversational and natural, not robotic
-        - Ask at most ONE question per response
-        - Make questions bold using **question text**
-        - Be forgiving of typos and spelling errors
-        - Focus on bodyweight exercises and simple equipment
-        - Don't mention dumbbells or heavy equipment unless specifically asked
-        - If user asks for fitness advice or workout plans, respond conversationally without defaulting to onboarding questions
-        
-        User message: \(message)
-        
-        Respond naturally as Moki:
+        Rules:
+        1. Use ONLY body-weight exercises unless specific equipment is listed
+        2. No dumbbells or heavy weights unless explicitly mentioned
+        3. Create a 3-day plan with clear day sections
+        4. Include sets, reps, and rest periods
+        5. Format as readable text, not JSON
+        6. Keep it beginner-friendly and safe
         """
+        
+        do {
+            let response = try await model.generateContent(prompt)
+            return response.text ?? "Sorry, I couldn't generate a workout plan right now."
+        } catch {
+            return "Sorry, I couldn't generate a workout plan right now."
+        }
     }
     
     func clearMessages() {
@@ -1443,26 +1348,18 @@ class SpeechRecognitionManager: NSObject, ObservableObject {
 
 // MARK: - Profile Manager
 class ProfileManager: ObservableObject {
-    @Published var userName: String = ""
+    @Published var name: String = ""
     @Published var age: Int = 25
-    @Published var weight: Int = 150
-    @Published var height: Int = 70
-    @Published var fitnessLevel: String = ""
-    @Published var selectedGoals: [String] = []
-    @Published var equipment: String = ""
-    @Published var isOnboardingComplete: Bool = false
+    @Published var height: Int = 170
+    @Published var weight: Int = 70
     @Published var gender: String = ""
-    @Published var goal: String = ""
-    @Published var bmi: String = ""
-    
-    private var gptService: GPTService?
+    @Published var fitnessLevel: String = ""
+    @Published var equipment: [String] = []
+    @Published var goals: [String] = []
+    @Published var isOnboardingComplete: Bool = false
     
     init() {
         loadProfile()
-    }
-    
-    func setGPTService(_ service: GPTService) {
-        self.gptService = service
     }
     
     func completeOnboarding() {
@@ -1471,64 +1368,57 @@ class ProfileManager: ObservableObject {
     }
     
     func resetProfile() {
-        // Clear all stored data
-        userName = ""
+        name = ""
         age = 25
-        weight = 150
-        height = 70
+        height = 170
+        weight = 70
+        gender = ""
         fitnessLevel = ""
-        selectedGoals = []
-        equipment = ""
+        equipment = []
+        goals = []
         isOnboardingComplete = false
         
-        // Clear UserDefaults
         UserDefaults.standard.removeObject(forKey: "userName")
         UserDefaults.standard.removeObject(forKey: "age")
         UserDefaults.standard.removeObject(forKey: "weight")
         UserDefaults.standard.removeObject(forKey: "height")
+        UserDefaults.standard.removeObject(forKey: "gender")
         UserDefaults.standard.removeObject(forKey: "fitnessLevel")
-        UserDefaults.standard.removeObject(forKey: "selectedGoals")
         UserDefaults.standard.removeObject(forKey: "equipment")
+        UserDefaults.standard.removeObject(forKey: "goals")
         UserDefaults.standard.removeObject(forKey: "hasCompletedOnboarding")
-        
-        // Clear chat history
-        gptService?.clearMessages()
     }
     
     private func loadProfile() {
-        userName = UserDefaults.standard.string(forKey: "userName") ?? ""
+        name = UserDefaults.standard.string(forKey: "userName") ?? ""
         age = UserDefaults.standard.integer(forKey: "age")
-        if age == 0 { age = 25 }
-        weight = UserDefaults.standard.integer(forKey: "weight")
-        if weight == 0 { weight = 150 }
         height = UserDefaults.standard.integer(forKey: "height")
-        if height == 0 { height = 70 }
+        weight = UserDefaults.standard.integer(forKey: "weight")
+        gender = UserDefaults.standard.string(forKey: "gender") ?? ""
         fitnessLevel = UserDefaults.standard.string(forKey: "fitnessLevel") ?? ""
-        equipment = UserDefaults.standard.string(forKey: "equipment") ?? ""
+        equipment = UserDefaults.standard.string(forKey: "equipment")?.components(separatedBy: ",") ?? []
+        goals = UserDefaults.standard.string(forKey: "goals")?.components(separatedBy: ",") ?? []
         isOnboardingComplete = UserDefaults.standard.bool(forKey: "hasCompletedOnboarding")
-        
-        if let goalsData = UserDefaults.standard.data(forKey: "selectedGoals"),
-           let goals = try? JSONDecoder().decode([String].self, from: goalsData) {
-            selectedGoals = goals
-        }
     }
     
     func saveProfile() {
-        UserDefaults.standard.set(userName, forKey: "userName")
-        UserDefaults.standard.set(age, forKey: "age")
-        UserDefaults.standard.set(weight, forKey: "weight")
-        UserDefaults.standard.set(height, forKey: "height")
-        UserDefaults.standard.set(fitnessLevel, forKey: "fitnessLevel")
-        UserDefaults.standard.set(equipment, forKey: "equipment")
-        
-        if let goalsData = try? JSONEncoder().encode(selectedGoals) {
-            UserDefaults.standard.set(goalsData, forKey: "selectedGoals")
+        let profile = Profile(
+            name: name,
+            age: age,
+            height: height,
+            weight: weight,
+            gender: gender,
+            fitnessLevel: fitnessLevel,
+            equipment: equipment,
+            goals: goals
+        )
+        if let encoded = try? JSONEncoder().encode(profile) {
+            UserDefaults.standard.set(encoded, forKey: "profile")
         }
     }
     
     func updateProfile(from text: String) -> String {
         let lowerText = text.lowercased()
-        
         // Extract weight
         if let weightMatch = lowerText.range(of: #"(\d+)\s*(?:pounds?|lbs?)"#, options: .regularExpression) {
             let weightString = String(lowerText[weightMatch])
@@ -1536,7 +1426,6 @@ class ProfileManager: ObservableObject {
                 weight = weightValue
             }
         }
-        
         // Extract height
         if let heightMatch = lowerText.range(of: #"(\d+)\s*(?:inches?|in)"#, options: .regularExpression) {
             let heightString = String(lowerText[heightMatch])
@@ -1544,7 +1433,6 @@ class ProfileManager: ObservableObject {
                 height = heightValue
             }
         }
-        
         // Extract age
         if let ageMatch = lowerText.range(of: #"(\d+)\s*(?:years?|yrs?)"#, options: .regularExpression) {
             let ageString = String(lowerText[ageMatch])
@@ -1552,14 +1440,12 @@ class ProfileManager: ObservableObject {
                 age = ageValue
             }
         }
-        
         // Extract gender
         if lowerText.contains("male") {
             gender = "male"
         } else if lowerText.contains("female") {
             gender = "female"
         }
-        
         // Extract fitness level
         if lowerText.contains("beginner") {
             fitnessLevel = "beginner"
@@ -1568,52 +1454,42 @@ class ProfileManager: ObservableObject {
         } else if lowerText.contains("advanced") {
             fitnessLevel = "advanced"
         }
-        
-        // Extract goal
+        // Extract goals (as array)
+        var foundGoals: [String] = []
         if lowerText.contains("build muscle") || lowerText.contains("muscle") {
-            goal = "build muscle"
-        } else if lowerText.contains("lose weight") || lowerText.contains("weight loss") {
-            goal = "lose weight"
-        } else if lowerText.contains("cardio") || lowerText.contains("endurance") {
-            goal = "improve cardio"
+            foundGoals.append("Build Muscle")
         }
-        
-        // Extract equipment
+        if lowerText.contains("lose weight") || lowerText.contains("weight loss") {
+            foundGoals.append("Lose Weight")
+        }
+        if lowerText.contains("maintenance") {
+            foundGoals.append("Maintenance")
+        }
+        if !foundGoals.isEmpty {
+            goals = foundGoals
+        }
+        // Extract equipment (as array)
         var equipmentList: [String] = []
-        if lowerText.contains("dumbbell") {
-            equipmentList.append("dumbbells")
+        if lowerText.contains("body-weight") || lowerText.contains("bodyweight") {
+            equipmentList.append("Body-weight")
         }
-        if lowerText.contains("resistance band") {
-            equipmentList.append("resistance bands")
+        if lowerText.contains("yoga mat") {
+            equipmentList.append("Yoga Mat")
         }
-        if lowerText.contains("none") || lowerText.contains("no equipment") {
-            equipmentList.append("none")
+        if lowerText.contains("jump rope") {
+            equipmentList.append("Jump Rope")
         }
         if !equipmentList.isEmpty {
-            equipment = equipmentList.joined(separator: ", ")
+            equipment = equipmentList
         }
-        
-        // Calculate BMI if we have weight and height
-        calculateBMI()
-        
-        return "Profile updated! I've extracted: \(goal.isEmpty ? "" : "Goal: \(goal), ")\(weight == 0 ? "" : "Weight: \(weight)lbs, ")\(height == 0 ? "" : "Height: \(height)in, ")\(age == 0 ? "" : "Age: \(age), ")\(gender.isEmpty ? "" : "Gender: \(gender), ")\(fitnessLevel.isEmpty ? "" : "Level: \(fitnessLevel), ")\(equipment.isEmpty ? "" : "Equipment: \(equipment)")"
-    }
-    
-    func calculateBMI() {
-        let weightValue = Double(weight)
-        let heightValue = Double(height)
-        let heightInMeters = heightValue * 0.0254 // Convert inches to meters
-        let weightInKg = weightValue * 0.453592 // Convert lbs to kg
-        let bmiValue = weightInKg / (heightInMeters * heightInMeters)
-        bmi = String(format: "%.1f", bmiValue)
+        return "Profile updated! I've extracted: \(goals.isEmpty ? "" : "Goals: \(goals.joined(separator: ", ")), ")\(weight == 0 ? "" : "Weight: \(weight)lbs, ")\(height == 0 ? "" : "Height: \(height)in, ")\(age == 0 ? "" : "Age: \(age), ")\(gender.isEmpty ? "" : "Gender: \(gender), ")\(fitnessLevel.isEmpty ? "" : "Level: \(fitnessLevel), ")\(equipment.isEmpty ? "" : "Equipment: \(equipment.joined(separator: ", "))")"
     }
 }
 
 // MARK: - HealthKit Manager
 class HealthKitManager: ObservableObject {
-    @Published var biometricData: BiometricData?
-    @Published var workoutJournal: [WorkoutJournalEntry] = []
     @Published var isAuthorized = false
+    @Published var biometrics = BiometricData()
     
     private let healthStore = HKHealthStore()
     
@@ -1629,8 +1505,7 @@ class HealthKitManager: ObservableObject {
             HKObjectType.quantityType(forIdentifier: .activeEnergyBurned)!,
             HKObjectType.quantityType(forIdentifier: .distanceWalkingRunning)!,
             HKObjectType.quantityType(forIdentifier: .heartRate)!,
-            HKObjectType.quantityType(forIdentifier: .dietaryWater)!,
-            HKObjectType.workoutType()
+            HKObjectType.quantityType(forIdentifier: .dietaryWater)!
         ]
         
         healthStore.requestAuthorization(toShare: nil, read: typesToRead) { success, error in
@@ -1651,204 +1526,160 @@ class HealthKitManager: ObservableObject {
         let startOfDay = calendar.startOfDay(for: now)
         let predicate = HKQuery.predicateForSamples(withStart: startOfDay, end: now, options: .strictStartDate)
         
-        fetchSteps(predicate: predicate) { steps in
-            self.fetchCalories(predicate: predicate) { calories in
-                self.fetchDistance(predicate: predicate) { distance in
-                    self.fetchHeartRate(predicate: predicate) { heartRate in
-                        self.fetchWorkouts(predicate: predicate) { workouts in
-                            DispatchQueue.main.async {
-                                self.biometricData = BiometricData(
-                                    date: now,
-                                    steps: steps,
-                                    caloriesBurned: calories,
-                                    activeCalories: calories,
-                                    distance: distance,
-                                    heartRate: heartRate,
-                                    workouts: workouts
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        fetchSteps(predicate: predicate)
+        fetchCalories(predicate: predicate)
+        fetchDistance(predicate: predicate)
+        fetchHeartRate(predicate: predicate)
+        fetchWater(predicate: predicate)
     }
     
-    private func fetchSteps(predicate: NSPredicate, completion: @escaping (Int) -> Void) {
+    private func fetchSteps(predicate: NSPredicate) {
         let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
         let query = HKStatisticsQuery(quantityType: stepType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
             let steps = result?.sumQuantity()?.doubleValue(for: HKUnit.count()) ?? 0
-            completion(Int(steps))
+            DispatchQueue.main.async {
+                self.biometrics.steps = Int(steps)
+            }
         }
         healthStore.execute(query)
     }
     
-    private func fetchCalories(predicate: NSPredicate, completion: @escaping (Double) -> Void) {
+    private func fetchCalories(predicate: NSPredicate) {
         let calorieType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!
         let query = HKStatisticsQuery(quantityType: calorieType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
             let calories = result?.sumQuantity()?.doubleValue(for: HKUnit.kilocalorie()) ?? 0
-            completion(calories)
+            DispatchQueue.main.async {
+                self.biometrics.activeCalories = Int(calories)
+            }
         }
         healthStore.execute(query)
     }
     
-    private func fetchDistance(predicate: NSPredicate, completion: @escaping (Double) -> Void) {
+    private func fetchDistance(predicate: NSPredicate) {
         let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
         let query = HKStatisticsQuery(quantityType: distanceType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
             let distance = result?.sumQuantity()?.doubleValue(for: HKUnit.meter()) ?? 0
-            completion(distance)
+            DispatchQueue.main.async {
+                self.biometrics.distance = distance / 1000 // Convert to km
+            }
         }
         healthStore.execute(query)
     }
     
-    private func fetchHeartRate(predicate: NSPredicate, completion: @escaping (Double?) -> Void) {
+    private func fetchHeartRate(predicate: NSPredicate) {
         let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
         let query = HKStatisticsQuery(quantityType: heartRateType, quantitySamplePredicate: predicate, options: .discreteAverage) { _, result, _ in
-            let heartRate = result?.averageQuantity()?.doubleValue(for: HKUnit(from: "count/min"))
-            completion(heartRate)
+            let heartRate = result?.averageQuantity()?.doubleValue(for: HKUnit(from: "count/min")) ?? 0
+            DispatchQueue.main.async {
+                self.biometrics.heartRate = Int(heartRate)
+            }
         }
         healthStore.execute(query)
     }
     
-    private func fetchWorkouts(predicate: NSPredicate, completion: @escaping ([HealthKitWorkout]) -> Void) {
-        let workoutQuery = HKSampleQuery(sampleType: .workoutType(), predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, _ in
-            let workouts = samples?.compactMap { sample -> HealthKitWorkout? in
-                guard let workout = sample as? HKWorkout else { return nil }
-                return HealthKitWorkout(
-                    id: workout.uuid.uuidString,
-                    workoutTitle: self.getWorkoutTypeName(workout.workoutActivityType),
-                    startTime: workout.startDate,
-                    endTime: workout.endDate,
-                    duration: workout.duration,
-                    caloriesBurned: workout.totalEnergyBurned?.doubleValue(for: HKUnit.kilocalorie()) ?? 0,
-                    workoutType: self.getWorkoutTypeName(workout.workoutActivityType)
-                )
-            } ?? []
-            completion(workouts)
+    private func fetchWater(predicate: NSPredicate) {
+        let waterType = HKQuantityType.quantityType(forIdentifier: .dietaryWater)!
+        let query = HKStatisticsQuery(quantityType: waterType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, result, _ in
+            let water = result?.sumQuantity()?.doubleValue(for: HKUnit.liter()) ?? 0
+            DispatchQueue.main.async {
+                self.biometrics.water = water
+            }
         }
-        healthStore.execute(workoutQuery)
-    }
-    
-    private func getWorkoutTypeName(_ activityType: HKWorkoutActivityType) -> String {
-        switch activityType {
-        case .running:
-            return "Running"
-        case .walking:
-            return "Walking"
-        case .cycling:
-            return "Cycling"
-        case .swimming:
-            return "Swimming"
-        case .yoga:
-            return "Yoga"
-        case .functionalStrengthTraining:
-            return "Strength Training"
-        case .traditionalStrengthTraining:
-            return "Traditional Strength Training"
-        case .highIntensityIntervalTraining:
-            return "HIIT"
-        case .mixedCardio:
-            return "Mixed Cardio"
-        case .coreTraining:
-            return "Core Training"
-        case .flexibility:
-            return "Flexibility"
-        case .mindAndBody:
-            return "Mind & Body"
-        default:
-            return "Workout"
-        }
+        healthStore.execute(query)
     }
 }
 
-// MARK: - Workout Session Manager
-class WorkoutSessionManager: ObservableObject {
-    @Published var currentSession: WorkoutSession?
-    @Published var isSessionActive = false
-    
-    private var activityTracker: ActivityTracker?
-    
-    func setActivityTracker(_ tracker: ActivityTracker) {
-        self.activityTracker = tracker
+// MARK: - Notification Manager
+class NotificationManager: ObservableObject {
+    func requestPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            print("Notification permission granted: \(granted)")
+        }
     }
     
-    func startSession(with workout: WorkoutPlan) {
-        currentSession = WorkoutSession(workout: workout)
-        isSessionActive = true
-    }
-    
-    func completeExercise(_ exercise: Exercise) {
-        currentSession?.completeExercise(exercise)
-        activityTracker?.addActivity(ActivityItem(
-            type: "Exercise Completed",
-            value: exercise.name,
-            timestamp: Date(),
-            impact: "Progress"
-        ))
-    }
-    
-    func endSession() {
-        guard let session = currentSession else { return }
+    func scheduleWorkoutReminder(date: Date) {
+        let content = UNMutableNotificationContent()
+        content.title = "Workout Reminder"
+        content.body = "Time for your workout! 💪"
+        content.sound = .default
         
-        activityTracker?.addActivity(ActivityItem(
-            type: "Workout Completed",
-            value: session.workout.title,
-            timestamp: Date(),
-            impact: "Achievement"
-        ))
+        let triggerDate = Calendar.current.date(byAdding: .minute, value: -15, to: date) ?? date
+        let trigger = UNCalendarNotificationTrigger(dateMatching: Calendar.current.dateComponents([.year, .month, .day, .hour, .minute], from: triggerDate), repeats: false)
         
-        currentSession = nil
-        isSessionActive = false
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(request)
     }
 }
 
-struct WorkoutSession {
-    let workout: WorkoutPlan
-    let startTime: Date
-    var completedExercises: [String] = []
+// MARK: - Workout Plan Manager
+class WorkoutPlanManager: ObservableObject {
+    @Published var currentPlan: String = ""
+    @Published var showingCalendarPrompt = false
     
-    init(workout: WorkoutPlan) {
-        self.workout = workout
-        self.startTime = Date()
-    }
-    
-    mutating func completeExercise(_ exercise: Exercise) {
-        completedExercises.append(exercise.name)
-    }
-    
-    var duration: TimeInterval {
-        return Date().timeIntervalSince(startTime)
-    }
-    
-    var progress: Double {
-        return Double(completedExercises.count) / Double(workout.exercises.count)
+    func setPlan(_ plan: String) {
+        currentPlan = plan
+        showingCalendarPrompt = true
     }
 }
 
-// MARK: - Goal Manager
-class GoalManager: ObservableObject {
-    @Published var availableGoals: [String] = [
-        "Lose Weight",
-        "Build Muscle",
-        "Improve Cardio",
-        "Increase Strength",
-        "Maintain Fitness",
-        "Improve Flexibility",
-        "Better Endurance",
-        "Tone Body"
-    ]
+// MARK: - Workout Journal
+class WorkoutJournal: ObservableObject {
+    @Published var entries: [WorkoutEntry] = []
     
-    @Published var selectedGoals: [String] = []
+    init() {
+        loadEntries()
+    }
     
-    func toggleGoal(_ goal: String) {
-        if selectedGoals.contains(goal) {
-            selectedGoals.removeAll { $0 == goal }
-        } else {
-            selectedGoals.append(goal)
+    func addEntry(_ entry: WorkoutEntry) {
+        entries.append(entry)
+        saveEntries()
+    }
+    
+    func saveEntries() {
+        if let encoded = try? JSONEncoder().encode(entries) {
+            UserDefaults.standard.set(encoded, forKey: "journal")
         }
     }
     
-    func isSelected(_ goal: String) -> Bool {
-        return selectedGoals.contains(goal)
+    func loadEntries() {
+        if let data = UserDefaults.standard.data(forKey: "journal"),
+           let decoded = try? JSONDecoder().decode([WorkoutEntry].self, from: data) {
+            entries = decoded
+        }
     }
+}
+
+struct WorkoutEntry: Identifiable, Codable {
+    var id: UUID = UUID()
+    let date: Date
+    let type: String
+    let duration: Int
+    let calories: Int
+    let mood: Mood
+    let difficulty: Difficulty
+    let notes: String
+}
+
+enum Mood: String, CaseIterable, Codable {
+    case great = "Great"
+    case good = "Good"
+    case okay = "Okay"
+    case tired = "Tired"
+}
+
+enum Difficulty: String, CaseIterable, Codable {
+    case easy = "Easy"
+    case moderate = "Moderate"
+    case hard = "Hard"
+}
+
+struct Profile: Codable {
+    var name: String
+    let age: Int
+    let height: Int
+    let weight: Int
+    let gender: String
+    let fitnessLevel: String
+    let equipment: [String]
+    let goals: [String]
 }
