@@ -207,12 +207,4 @@ class ChatEngine: ObservableObject {
         messages.append(ChatMessage(id: UUID(), content: message, isUser: true, timestamp: Date(), actions: []))
         messages.append(ChatMessage(id: UUID(), content: response, isUser: false, timestamp: Date(), actions: []))
     }
-}
-
-struct ChatMessage: Identifiable {
-    let id: UUID
-    let content: String
-    let isUser: Bool
-    let timestamp: Date
-    let actions: [ChatAction]
 } 
