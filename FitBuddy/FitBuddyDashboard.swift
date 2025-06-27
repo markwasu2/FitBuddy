@@ -56,11 +56,11 @@ struct FitBuddyDashboard: View {
 
                     // (B) Biometrics Grid
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                        MetricCard(title: "Steps", value: Double(healthKitManager.biometrics.steps), unit: "steps", trend: .up, latestWeekData: generateMockData())
-                        MetricCard(title: "Active Calories", value: Double(healthKitManager.biometrics.activeCalories), unit: "kcal", trend: .flat, latestWeekData: generateMockData())
-                        MetricCard(title: "Heart Rate", value: Double(healthKitManager.biometrics.heartRate), unit: "bpm", trend: .down, latestWeekData: generateMockData())
-                        MetricCard(title: "Distance", value: healthKitManager.biometrics.distance, unit: "km", trend: .up, latestWeekData: generateMockData())
-                        MetricCard(title: "Hydration", value: healthKitManager.biometrics.water, unit: "L", trend: .flat, latestWeekData: generateMockData())
+                        MetricCard(title: "Steps", value: 8432, unit: "steps", trend: .up, latestWeekData: generateMockData())
+                        MetricCard(title: "Active Calories", value: 456, unit: "kcal", trend: .flat, latestWeekData: generateMockData())
+                        MetricCard(title: "Heart Rate", value: 72, unit: "bpm", trend: .down, latestWeekData: generateMockData())
+                        MetricCard(title: "Distance", value: 6.2, unit: "km", trend: .up, latestWeekData: generateMockData())
+                        MetricCard(title: "Hydration", value: 2.1, unit: "L", trend: .flat, latestWeekData: generateMockData())
                         MetricCard(title: "Weight", value: Double(profileManager.weight), unit: "lbs", trend: .flat, latestWeekData: generateMockData())
                     }
                     .padding(.horizontal)
@@ -80,7 +80,7 @@ struct FitBuddyDashboard: View {
             .background(Color.bgPrimary.ignoresSafeArea())
             .refreshable {
                 isRefreshing = true
-                healthKitManager.fetchTodayData()
+                // Mock refresh - in a real app this would fetch actual data
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { isRefreshing = false }
             }
 
