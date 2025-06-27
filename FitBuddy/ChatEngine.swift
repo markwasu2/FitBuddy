@@ -7,6 +7,7 @@ enum ChatStage {
     case idle
     case onboarding
     case qa
+    case planning
 }
 
 enum QIndex {
@@ -73,6 +74,8 @@ class ChatEngine: ObservableObject {
             return handleQA(input: input)
         case .idle:
             return handleIdle(input: input)
+        case .planning:
+            return handleWorkoutPlanning()
         }
     }
     
@@ -202,9 +205,34 @@ class ChatEngine: ObservableObject {
         currentResponse = ChatResponse(text: "What would you like to know about fitness?", stage: .qa, actions: [.none])
     }
     
+    private func handleWorkoutLogging() {
+        // Mock workout entry creation
+        _ = WorkoutEntry(
+            date: Date(),
+            exercises: [ExerciseItem(name: "Push-ups")],
+            type: "Strength Training",
+            duration: 30,
+            mood: "good",
+            difficulty: "moderate"
+        )
+        
+        let response = "Great! I've logged your workout. You completed a 30-minute strength training session. Keep up the momentum! 💪"
+        messages.append(ChatMessage(content: response, isFromUser: false))
+        currentStage = .idle
+    }
+    
+    private func handleWorkoutPlanning() -> ChatResponse {
+        let response = "I'd be happy to help you plan a workout! What type of training are you looking for today? (strength, cardio, flexibility, etc.)"
+        messages.append(ChatMessage(content: response, isFromUser: false))
+        currentStage = .planning
+        return ChatResponse(text: response, stage: .planning, actions: [.none])
+    }
+    
     func sendMessage(_ message: String) {
-        let response = geminiService.sendMessage(message)
-        messages.append(ChatMessage(id: UUID(), content: message, isUser: true, timestamp: Date(), actions: []))
-        messages.append(ChatMessage(id: UUID(), content: response, isUser: false, timestamp: Date(), actions: []))
+        messages.append(ChatMessage(content: message, isFromUser: true))
+        
+        // Mock AI response
+        let response = "Thanks for your message: \(message). I'm here to help with your fitness journey!"
+        messages.append(ChatMessage(content: response, isFromUser: false))
     }
 } 
