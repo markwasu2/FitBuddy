@@ -18,6 +18,45 @@ import AVFoundation
 import HealthKit
 import Foundation
 
+// MARK: - Modern Design System
+extension Color {
+    static let bgPrimary = Color.white
+    static let bgSecondary = Color(red: 248/255, green: 248/255, blue: 250/255)
+    static let textPrimary = Color.black
+    static let textSecondary = Color(red: 142/255, green: 142/255, blue: 147/255)
+    static let accentBlue = Color(red: 10/255, green: 132/255, blue: 255/255)
+    static let cardShadow = Color.black.opacity(0.05)
+    static let cardCorner: CGFloat = 16
+}
+
+extension Font {
+    static let largeTitle = Font.system(size: 28, weight: .bold)
+    static let title = Font.system(size: 20, weight: .semibold)
+    static let body = Font.system(size: 17)
+    static let caption = Font.system(size: 13, weight: .medium)
+}
+
+extension CGFloat {
+    static let spacingS: CGFloat = 8
+    static let spacingM: CGFloat = 16
+    static let spacingL: CGFloat = 24
+}
+
+extension View {
+    func cardStyle() -> some View {
+        self.padding(.spacingM)
+            .background(Color.bgSecondary)
+            .cornerRadius(Color.cardCorner)
+            .modifier(CardShadow())
+    }
+}
+
+struct CardShadow: ViewModifier {
+    func body(content: Content) -> some View {
+        content.shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
+    }
+}
+
 // MARK: - App Entry Point
 @main
 struct FitBuddyApp: App {
@@ -69,7 +108,6 @@ extension Color {
     static let cardBackground = Color(.systemBackground)
     static let errorRed = Color.red
     static let successGreen = Color.green
-    static let accentBlue = Color.blue
     static let secondaryText = Color(.secondaryLabel)
 }
 
@@ -594,127 +632,47 @@ struct GoalButton: View {
     }
 }
 
-// MARK: ‑ Tab Container
+// MARK: - Tab Container
 struct MainTabView: View {
     var body: some View {
         TabView {
             HomeView()
-                .tabItem { Label("Home", systemImage: "house") }
+                .tabItem { 
+                    Image(systemName: "house.fill")
+                }
             ChatbotView()
-                .tabItem { Label("Chat", systemImage: "message") }
-            ScannerView()
-                .tabItem { Label("Scan", systemImage: "camera") }
+                .tabItem { 
+                    Image(systemName: "message.fill")
+                }
+            WorkoutCalendarView()
+                .tabItem {
+                    Image(systemName: "list.bullet.rectangle")
+                }
         }
+        .accentColor(.accentBlue)
     }
 }
 
-// MARK: ‑ Home
+// MARK: - Home
 struct HomeView: View {
-    @State private var streak: Int = 0
-    @AppStorage("userWeight") private var weight: String = ""
-    @AppStorage("userHeight") private var height: String = ""
-    @AppStorage("userAge") private var age: String = ""
-    @AppStorage("userGender") private var gender: String = ""
-    @AppStorage("userFitnessLevel") private var fitnessLevel: String = ""
-    @AppStorage("userBMI") private var bmi: String = ""
-    @AppStorage("userEquipment") private var equipment: String = ""
-    @AppStorage("userName") private var userName: String = ""
-    @AppStorage("hasCompletedOnboarding") private var hasOnboarded = false
-    
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Welcome Section
-                VStack(spacing: 12) {
-                    Text("Welcome back, \(userName.isEmpty ? "Fitness Buddy" : userName)! 👋")
-                        .font(.title2)
-                        .bold()
-                    Text("Daily Streak: \(streak) 🔥")
-                        .font(.headline)
-                    Text("Complete a workout today to keep it alive!")
-                        .foregroundColor(.secondary)
-                }
-                .padding()
-                .background(Color.orange.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-                // Profile Section
-                VStack(alignment: .leading, spacing: 15) {
-                    Text("🏃‍♂️ Your Fitness Profile")
-                        .font(.headline)
-                        .bold()
-                    
-                    ProfileRow(title: "Name", value: userName.isEmpty ? "Not set" : userName)
-                    ProfileRow(title: "Weight", value: weight.isEmpty ? "Not set" : "\(weight) lbs")
-                    ProfileRow(title: "Height", value: height.isEmpty ? "Not set" : "\(height) inches")
-                    ProfileRow(title: "Age", value: age.isEmpty ? "Not set" : "\(age) years")
-                    ProfileRow(title: "Gender", value: gender.isEmpty ? "Not set" : gender.capitalized)
-                    ProfileRow(title: "Fitness Level", value: fitnessLevel.isEmpty ? "Not set" : fitnessLevel.capitalized)
-                    ProfileRow(title: "BMI", value: bmi.isEmpty ? "Not set" : bmi)
-                    ProfileRow(title: "Equipment", value: equipment.isEmpty ? "Not set" : equipment)
-                }
-                .padding()
-                .background(Color.blue.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                
-                // Quick Actions
-                VStack(spacing: 12) {
-                    Text("Quick Actions")
-                        .font(.headline)
-                        .bold()
-                    
-                    Button("Ask for Workout Plan") {
-                        // This would navigate to chat
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .frame(maxWidth: .infinity)
-                    
-                    Button("Update Profile") {
-                        hasOnboarded = false
-                    }
-                    .buttonStyle(.bordered)
-                    .frame(maxWidth: .infinity)
-                    
-                    Button("Reset Onboarding") {
-                        resetProfile()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.red)
-                    .frame(maxWidth: .infinity)
-                }
-                .padding()
-                .background(Color.green.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .padding()
-        }
-    }
-    
-    private func resetProfile() {
-        userName = ""
-        weight = ""
-        height = ""
-        age = ""
-        gender = ""
-        fitnessLevel = ""
-        bmi = ""
-        equipment = ""
-        hasOnboarded = false
+        FitBuddyDashboard()
     }
 }
 
-struct ProfileRow: View {
-    let title: String
+struct StatRow: View {
+    let label: String
     let value: String
     
     var body: some View {
-        HStack {
-            Text(title)
-                .foregroundColor(.secondary)
-                .frame(width: 100, alignment: .leading)
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.caption)
+                .foregroundColor(.textSecondary)
             Text(value)
-                .bold()
-            Spacer()
+                .font(.body)
+                .fontWeight(.semibold)
+                .foregroundColor(.textPrimary)
         }
     }
 }
@@ -723,7 +681,7 @@ struct ProfileRow: View {
 struct ChatbotView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @State private var input: String = ""
-    @State private var messages: [ChatBubble] = []
+    @State private var messages: [ChatMessage] = []
     private let gpt = GPTService()
     private let calendar = CalendarManager()
     @StateObject private var speechManager = SpeechRecognitionManager()
@@ -732,88 +690,127 @@ struct ChatbotView: View {
     @State private var isOnboarding = false
     
     var body: some View {
-        VStack {
-            ScrollView {
-                LazyVStack(spacing: 12) {
-                    ForEach(messages) { bubble in
-                        HStack(alignment: .top) {
-                            if bubble.isUser { Spacer() }
-                            Text(bubble.formattedText)
-                                .padding(12)
-                                .foregroundColor(bubble.isUser ? .white : .primary)
-                                .background(bubble.isUser ? Color.blue : Color.gray.opacity(0.1))
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .frame(maxWidth: UIScreen.main.bounds.width * 0.8, alignment: bubble.isUser ? .trailing : .leading)
-                                .multilineTextAlignment(bubble.isUser ? .trailing : .leading)
-                            if !bubble.isUser { Spacer() }
+        VStack(spacing: 0) {
+            // Chat Messages
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: .spacingM) {
+                        ForEach(messages) { message in
+                            ModernChatBubble(message: message)
+                                .id(message.id)
                         }
-                        .padding(.horizontal)
-                    }
-                    if isLoading {
-                        HStack {
-                            Spacer()
-                            VStack {
-                                ProgressView()
-                                Text(isOnboarding ? "Processing..." : "Creating your personalized plan...")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                        
+                        // Typing indicator
+                        if isLoading {
+                            HStack {
+                                ModernChatBubble(message: ChatMessage(
+                                    id: UUID(),
+                                    content: "",
+                                    isUser: false,
+                                    timestamp: Date()
+                                ))
+                                .overlay(
+                                    HStack(spacing: 4) {
+                                        ForEach(0..<3) { index in
+                                            Circle()
+                                                .fill(Color.textSecondary)
+                                                .frame(width: 6, height: 6)
+                                                .scaleEffect(1.0)
+                                                .animation(
+                                                    Animation.easeInOut(duration: 0.6)
+                                                        .repeatForever()
+                                                        .delay(Double(index) * 0.2),
+                                                    value: isLoading
+                                                )
+                                        }
+                                    }
+                                )
+                                Spacer()
                             }
-                            .padding()
-                            Spacer()
                         }
                     }
+                    .padding(.horizontal, .spacingM)
+                    .padding(.top, .spacingM)
                 }
-            }
-            .frame(maxWidth: .infinity)
-            
-            // Voice transcription display
-            if !speechManager.transcribedText.isEmpty {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("🎤 You said:")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Text(speechManager.transcribedText)
-                        .padding(8)
-                        .background(Color.yellow.opacity(0.2))
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                }
-                .padding(.horizontal)
-            }
-            
-            Divider()
-            
-            // Input area with voice button
-            HStack {
-                // Voice button
-                Button(action: {
-                    if speechManager.isRecording {
-                        speechManager.stopRecording()
-                        input = speechManager.transcribedText
-                    } else {
-                        speechManager.startRecording()
+                .onChange(of: messages.count) { _, _ in
+                    withAnimation(.easeOut(duration: 0.3)) {
+                        proxy.scrollTo(messages.last?.id, anchor: .bottom)
                     }
-                }) {
-                    Image(systemName: speechManager.isRecording ? "stop.circle.fill" : "mic.circle.fill")
-                        .font(.title2)
-                        .foregroundColor(speechManager.isRecording ? .red : .blue)
                 }
-                .disabled(!speechManager.isAuthorized)
-                
-                TextField(isOnboarding ? "Type your answer..." : "Ask for a workout plan or update profile...", text: $input)
-                    .textFieldStyle(.roundedBorder)
-                    .disabled(isLoading)
-                
-                Button("Send") { send() }
-                    .disabled(input.isEmpty || isLoading)
-                    .buttonStyle(.borderedProminent)
             }
-            .padding()
+            
+            // Input Bar
+            HStack(spacing: .spacingS) {
+                HStack(spacing: .spacingS) {
+                    TextField("Ask me anything about fitness...", text: $input)
+                        .font(.body)
+                        .padding(.horizontal, .spacingM)
+                        .padding(.vertical, .spacingS)
+                        .background(Color(red: 239/255, green: 239/255, blue: 244/255))
+                        .cornerRadius(24)
+                    
+                    Button(action: {
+                        if speechManager.isRecording {
+                            speechManager.stopRecording()
+                            input = speechManager.transcribedText
+                        } else {
+                            speechManager.startRecording()
+                        }
+                    }) {
+                        Image(systemName: speechManager.isRecording ? "waveform" : "mic.fill")
+                            .font(.system(size: 22))
+                            .foregroundColor(.accentBlue)
+                            .frame(width: 44, height: 44)
+                    }
+                    .disabled(!speechManager.isAuthorized)
+                }
+                
+                Button(action: send) {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.system(size: 32))
+                        .foregroundColor(input.isEmpty ? .textSecondary : .accentBlue)
+                }
+                .disabled(input.isEmpty || isLoading)
+            }
+            .padding(.horizontal, .spacingM)
+            .padding(.vertical, .spacingM)
+            .background(Color.bgPrimary)
         }
+        .background(Color.bgPrimary)
         .onAppear {
             if !speechManager.isAuthorized {
                 speechManager.requestAuthorization()
             }
             startOnboardingIfNeeded()
+        }
+        .onChange(of: speechManager.transcribedText) { _, newValue in
+            if !newValue.isEmpty && !speechManager.isRecording {
+                input = newValue
+                send()
+            }
+        }
+    }
+    
+    private func send() {
+        guard !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let userMessage = ChatMessage(id: UUID(), content: input, isUser: true, timestamp: Date())
+        messages.append(userMessage)
+        
+        let userInput = input
+        input = ""
+        isLoading = true
+        
+        // Simulate AI response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            self.isLoading = false
+            let botMessage = ChatMessage(
+                id: UUID(),
+                content: "Thanks for your message: '\(userInput)'! I'm here to help with your fitness journey.",
+                isUser: false,
+                timestamp: Date()
+            )
+            self.messages.append(botMessage)
         }
     }
     
@@ -825,406 +822,39 @@ struct ChatbotView: View {
             startOnboarding()
         } else {
             isOnboarding = false
-            if messages.isEmpty {
-                messages = [ChatBubble(text: "Hi \(profileManager.name)! I'm FitBuddy! You can speak to me or type. Try saying 'Update my profile' or ask for a workout plan.", isUser: false)]
-            }
         }
     }
     
     private func startOnboarding() {
-        messages.append(ChatBubble(text: "Hi! I'm FitBuddy, your personal fitness assistant! 👋\n\nLet's get to know each other so I can create the perfect workout plan for you.\n\nWhat's your name?", isUser: false))
-    }
-    
-    private func handleOnboardingResponse() {
-        let userResponse = input.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        switch onboardingStep {
-        case 0: // Name
-            profileManager.name = userResponse
-            messages.append(ChatBubble(text: "Nice to meet you, \(profileManager.name)! ��\n\nHow old are you?", isUser: false))
-            onboardingStep = 1
-            
-        case 1: // Age
-            if let ageValue = Int(userResponse) {
-                profileManager.age = ageValue
-                messages.append(ChatBubble(text: "Great! Now, what's your weight? You can tell me in pounds (lbs) or kilograms (kg).", isUser: false))
-                onboardingStep = 2
-            } else {
-                messages.append(ChatBubble(text: "Please enter a valid age (just the number).", isUser: false))
-            }
-            
-        case 2: // Weight
-            let lowerResponse = userResponse.lowercased()
-            if lowerResponse.contains("kg") {
-                // Convert kg to lbs
-                if let kgValue = Double(lowerResponse.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces)) {
-                    let lbsValue = kgValue * 2.20462
-                    profileManager.weight = Int(lbsValue)
-                }
-            } else {
-                // Assume lbs
-                if let lbsValue = Double(lowerResponse.replacingOccurrences(of: "lbs", with: "").replacingOccurrences(of: "pounds", with: "").trimmingCharacters(in: .whitespaces)) {
-                    profileManager.weight = Int(lbsValue)
-                }
-            }
-            
-            if profileManager.weight > 0 {
-                messages.append(ChatBubble(text: "Perfect! Now, what's your height? You can tell me in inches or centimeters.", isUser: false))
-                onboardingStep = 3
-            } else {
-                messages.append(ChatBubble(text: "Please enter a valid weight (e.g., '150 lbs' or '68 kg').", isUser: false))
-            }
-            
-        case 3: // Height
-            let lowerResponse = userResponse.lowercased()
-            if lowerResponse.contains("cm") {
-                // Convert cm to inches
-                if let cmValue = Double(lowerResponse.replacingOccurrences(of: "cm", with: "").trimmingCharacters(in: .whitespaces)) {
-                    let inchesValue = cmValue / 2.54
-                    profileManager.height = Int(inchesValue)
-                }
-            } else {
-                // Assume inches
-                if let inchesValue = Double(lowerResponse.replacingOccurrences(of: "inches", with: "").replacingOccurrences(of: "in", with: "").trimmingCharacters(in: .whitespaces)) {
-                    profileManager.height = Int(inchesValue)
-                }
-            }
-            
-            if profileManager.height > 0 {
-                messages.append(ChatBubble(text: "Great! Now, what's your primary fitness goal?\n\nChoose one:\n• Lose weight\n• Build muscle\n• Improve cardio/endurance\n• General fitness\n• Other (tell me more)", isUser: false))
-                onboardingStep = 4
-            } else {
-                messages.append(ChatBubble(text: "Please enter a valid height (e.g., '5 feet 10 inches' or '178 cm').", isUser: false))
-            }
-            
-        case 4: // Goal
-            let lowerResponse = userResponse.lowercased()
-            if lowerResponse.contains("lose") || lowerResponse.contains("weight") {
-                profileManager.goals = ["Lose Weight"]
-            } else if lowerResponse.contains("build") || lowerResponse.contains("muscle") {
-                profileManager.goals = ["Build Muscle"]
-            } else if lowerResponse.contains("cardio") || lowerResponse.contains("endurance") {
-                profileManager.goals = ["Improve Cardio"]
-            } else if lowerResponse.contains("general") || lowerResponse.contains("fitness") {
-                profileManager.goals = ["General Fitness"]
-            } else {
-                profileManager.goals = [userResponse]
-            }
-            
-            messages.append(ChatBubble(text: "Excellent! What equipment do you have available?\n\nChoose one:\n• None (bodyweight only)\n• Resistance bands\n• Basic home gym\n• Full gym access\n• Other (tell me more)", isUser: false))
-            onboardingStep = 5
-            
-        case 5: // Equipment
-            let lowerResponse = userResponse.lowercased()
-            if lowerResponse.contains("none") || lowerResponse.contains("bodyweight") {
-                profileManager.equipment = ["Body-weight"]
-            } else if lowerResponse.contains("resistance") || lowerResponse.contains("bands") {
-                profileManager.equipment = ["Resistance Bands"]
-            } else if lowerResponse.contains("home gym") || lowerResponse.contains("basic") {
-                profileManager.equipment = ["Basic Home Gym"]
-            } else if lowerResponse.contains("full gym") || lowerResponse.contains("gym access") {
-                profileManager.equipment = ["Full Gym Access"]
-            } else {
-                profileManager.equipment = [userResponse]
-            }
-            
-            messages.append(ChatBubble(text: "Perfect! Finally, what's your fitness level?\n\nChoose one:\n• Beginner (new to fitness)\n• Intermediate (regular exercise)\n• Advanced (experienced)", isUser: false))
-            onboardingStep = 6
-            
-        case 6: // Fitness Level
-            let lowerResponse = userResponse.lowercased()
-            if lowerResponse.contains("beginner") {
-                profileManager.fitnessLevel = "beginner"
-            } else if lowerResponse.contains("intermediate") {
-                profileManager.fitnessLevel = "intermediate"
-            } else if lowerResponse.contains("advanced") {
-                profileManager.fitnessLevel = "advanced"
-            } else {
-                profileManager.fitnessLevel = "beginner" // Default
-            }
-            
-            // Complete onboarding
-            profileManager.completeOnboarding()
-            isOnboarding = false
-            
-            let welcomeMessage = """
-            🎉 Perfect! Your profile is complete, \(profileManager.name)!
-            
-            📊 Your Profile:
-            • Age: \(profileManager.age) years
-            • Weight: \(profileManager.weight) lbs
-            • Height: \(profileManager.height) inches
-            • Level: \(profileManager.fitnessLevel.capitalized)
-            • Goal: \(profileManager.goals.joined(separator: ", "))
-            • Equipment: \(profileManager.equipment.joined(separator: ", "))
-            
-            I'm ready to create personalized workout plans just for you! 
-            
-            Try asking me for a workout plan or any fitness questions. You can also say "Update my profile" anytime to change your details.
-            """
-            
-            messages.append(ChatBubble(text: welcomeMessage, isUser: false))
-            
-        default:
-            break
-        }
-    }
-    
-    func send() {
-        guard !input.isEmpty else { return }
-        let userMessage = input
-        messages.append(ChatBubble(text: userMessage, isUser: true))
-        input = ""
-        isLoading = true
-        
-        if isOnboarding {
-            handleOnboardingResponse()
-            isLoading = false
-            return
-        }
-        
-        // Check if this is a profile update command
-        let lowerMessage = userMessage.lowercased()
-        if lowerMessage.contains("update") && lowerMessage.contains("profile") {
-            let profileUpdate = profileManager.updateProfile(from: userMessage)
-            messages.append(ChatBubble(text: profileUpdate, isUser: false))
-            isLoading = false
-            return
-        }
-        
-        // Create a comprehensive fitness-focused prompt
-        let contextPrompt = """
-        You are FitBuddy, an expert fitness coach and personal trainer. Generate CONCISE, SPECIFIC, and ACTIONABLE responses.
-
-        USER PROFILE:
-        - Name: \(profileManager.name)
-        - Goal: \(profileManager.goals.joined(separator: ", "))
-        - Equipment: \(profileManager.equipment.joined(separator: ", "))
-        - Weight: \(profileManager.weight) lbs
-        - Height: \(profileManager.height) inches
-        - Age: \(profileManager.age) years
-        - Gender: \(profileManager.gender)
-        - Fitness Level: \(profileManager.fitnessLevel)
-        - Question: \(userMessage)
-
-        INSTRUCTIONS:
-        1. Keep responses CONCISE (max 200 words for workout plans)
-        2. Be SPECIFIC with sets, reps, weights, and rest periods
-        3. Consider the user's equipment limitations
-        4. Adapt exercises to their fitness level
-        5. Account for age, gender, and BMI in recommendations
-        6. If they ask about updating their profile, suggest they say "Update my profile" followed by their details
-        7. Use their name \(profileManager.name) in responses to make it personal
-
-        WORKOUT PLAN FORMAT (if requested):
-        🏋️ **PERSONALIZED WORKOUT PLAN**
-
-        **Day 1: [Specific Focus]**
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-
-        **Day 2: [Specific Focus]**
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-
-        **Day 3: [Specific Focus]**
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-        - [Exercise]: [Sets] x [Reps] @ [Weight/Intensity] - [Rest]
-
-        💡 **Personalized Tips:**
-        - [Specific advice based on their profile]
-        - [Nutrition tip if relevant]
-
-        For general questions, provide specific, actionable advice in 2-3 bullet points.
-        """
-        
-        Task {
-            let reply = await gpt.generateRoutine(prompt: contextPrompt)
-            await MainActor.run {
-                messages.append(ChatBubble(text: reply, isUser: false))
-                isLoading = false
-            }
-            
-            // If the response suggests a workout, schedule it
-            if userMessage.lowercased().contains("workout") || userMessage.lowercased().contains("plan") {
-                try? calendar.addWorkout(title: "Workout", offsetMinutes: 1)
-            }
-        }
+        // Onboarding logic would go here
     }
 }
 
-struct ChatBubble: Identifiable {
-    var id: UUID = UUID()
-    let text: String
-    let isUser: Bool
+struct ModernChatBubble: View {
+    let message: ChatMessage
     
-    // Format the text for better display
-    var formattedText: String {
-        if isUser {
-            return text
-        } else {
-            // Add line breaks for better readability
-            return text.replacingOccurrences(of: "**", with: "\n**")
-                      .replacingOccurrences(of: " - ", with: "\n- ")
-        }
-    }
-}
-
-class GPTService: ObservableObject {
-    @Published var messages: [ChatMessage] = []
-    @Published var isLoading = false
-    @Published var errorMessage: String?
-    
-    private let model: GenerativeModel
-    
-    init() {
-        let apiKey = "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
-        model = GenerativeModel(name: "gemini-1.5-flash-latest", apiKey: apiKey)
-    }
-    
-    func sendMessage(_ content: String) async {
-        let userMessage = ChatMessage(content: content, isUser: true, timestamp: Date())
-        
-        await MainActor.run {
-            messages.append(userMessage)
-            isLoading = true
-            errorMessage = nil
-        }
-        
-        do {
-            let response = try await model.generateContent(content)
-            let assistantMessage = ChatMessage(content: response.text ?? "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
-            
-            await MainActor.run {
-                messages.append(assistantMessage)
-                isLoading = false
-            }
-        } catch {
-            let errorMessage = ChatMessage(content: "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
-            
-            await MainActor.run {
-                messages.append(errorMessage)
-                isLoading = false
+    var body: some View {
+        HStack {
+            if message.isUser {
+                Spacer()
+                Text(message.content)
+                    .font(.system(size: 14))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.accentBlue)
+                    .cornerRadius(18)
+            } else {
+                Text(message.content)
+                    .font(.system(size: 14))
+                    .foregroundColor(.textPrimary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color.bgSecondary)
+                    .cornerRadius(18)
+                Spacer()
             }
         }
-    }
-    
-    func generateWorkoutPlan(profile: Profile) async -> String {
-        let prompt = """
-        Create a personalized workout plan for \(profile.name) with the following details:
-        - Age: \(profile.age)
-        - Height: \(profile.height) cm
-        - Weight: \(profile.weight) kg
-        - Gender: \(profile.gender)
-        - Fitness Level: \(profile.fitnessLevel)
-        - Equipment: \(profile.equipment.joined(separator: ", "))
-        - Goals: \(profile.goals.joined(separator: ", "))
-        
-        Rules:
-        1. Use ONLY body-weight exercises unless specific equipment is listed
-        2. No dumbbells or heavy weights unless explicitly mentioned
-        3. Create a 3-day plan with clear day sections
-        4. Include sets, reps, and rest periods
-        5. Format as readable text, not JSON
-        6. Keep it beginner-friendly and safe
-        """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            return response.text ?? "Sorry, I couldn't generate a workout plan right now."
-        } catch {
-            return "Sorry, I couldn't generate a workout plan right now."
-        }
-    }
-    
-    func clearMessages() {
-        messages.removeAll()
-    }
-    
-    func generateRoutine(prompt: String) async -> String {
-        do {
-            print("Sending prompt to Gemini API...") // Debug: Log API call
-            let response = try await model.generateContent(prompt)
-            print("Received response from Gemini API") // Debug: Log successful response
-            if let text = response.text {
-                return text
-            }
-            print("No text in response") // Debug: Log empty response
-            return "I apologize, but I couldn't generate a response. Please try again."
-        } catch {
-            print("Detailed error: \(error)") // Debug: Log detailed error
-            let nsError = error as NSError
-            print("Error domain: \(nsError.domain)")
-            print("Error code: \(nsError.code)")
-            print("Error description: \(nsError.localizedDescription)")
-            print("Error user info: \(nsError.userInfo)")
-            
-            // Return a more specific error message based on the error
-            if nsError.domain == "GoogleGenerativeAI.GenerateContentError" {
-                return "I apologize, but there seems to be an issue with the AI service configuration. Please try again later."
-            }
-            return "I apologize, but I'm having trouble connecting to the AI service. Please check your internet connection and try again."
-        }
-    }
-}
-
-class CalendarManager {
-    private let store = EKEventStore()
-    
-    init() {
-        requestAccess()
-    }
-    
-    private func requestAccess() {
-        // Request calendar access with proper error handling using new iOS 17+ API
-        if #available(iOS 17.0, *) {
-            store.requestFullAccessToEvents { granted, error in
-                if let error = error {
-                    print("Error requesting calendar access: \(error)")
-                }
-                if !granted {
-                    print("Calendar access not granted")
-                }
-            }
-        } else {
-            // Fallback for older iOS versions
-            store.requestAccess(to: .event) { granted, error in
-                if let error = error {
-                    print("Error requesting calendar access: \(error)")
-                }
-                if !granted {
-                    print("Calendar access not granted")
-                }
-            }
-        }
-    }
-    
-    func addWorkout(title: String, offsetMinutes: Double) throws {
-        // Check calendar authorization status using new iOS 17+ API
-        let status: EKAuthorizationStatus
-        if #available(iOS 17.0, *) {
-            status = EKEventStore.authorizationStatus(for: .event)
-        } else {
-            status = EKEventStore.authorizationStatus(for: .event)
-        }
-        
-        guard status == .authorized || status == .fullAccess else {
-            throw NSError(domain: "CalendarError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Calendar access not authorized"])
-        }
-        
-        guard let cal = store.defaultCalendarForNewEvents else {
-            throw NSError(domain: "CalendarError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No default calendar found"])
-        }
-        
-        let event = EKEvent(eventStore: store)
-        event.calendar = cal
-        event.title = title
-        event.startDate = Date().addingTimeInterval(offsetMinutes*60)
-        event.endDate = event.startDate.addingTimeInterval(60*60)
-        try store.save(event, span: .thisEvent)
     }
 }
 
@@ -1656,39 +1286,87 @@ class WorkoutPlanManager: ObservableObject {
 // MARK: - Workout Journal
 class WorkoutJournal: ObservableObject {
     @Published var entries: [WorkoutEntry] = []
+    private let key = "WorkoutJournalEntries"
+    private var entryDict: [String: WorkoutEntry] = [:] // dateKey: entry
     
     init() {
-        loadEntries()
+        load()
+    }
+    
+    func entry(for day: Date) -> WorkoutEntry? {
+        let key = Self.dateKey(day)
+        return entryDict[key]
+    }
+
+    func upsert(_ entry: WorkoutEntry) {
+        let key = Self.dateKey(entry.date)
+        entryDict[key] = entry
+        entries = Array(entryDict.values).sorted { $0.date > $1.date }
+        save()
+    }
+
+    func delete(_ entry: WorkoutEntry) {
+        let key = Self.dateKey(entry.date)
+        entryDict.removeValue(forKey: key)
+        entries = Array(entryDict.values).sorted { $0.date > $1.date }
+        save()
     }
     
     func addEntry(_ entry: WorkoutEntry) {
-        entries.append(entry)
-        saveEntries()
+        upsert(entry)
     }
     
-    func saveEntries() {
-        if let encoded = try? JSONEncoder().encode(entries) {
-            UserDefaults.standard.set(encoded, forKey: "journal")
-        }
+    private func save() {
+        let data = try? JSONEncoder().encode(Array(entryDict.values))
+        UserDefaults.standard.set(data, forKey: key)
     }
     
-    func loadEntries() {
-        if let data = UserDefaults.standard.data(forKey: "journal"),
-           let decoded = try? JSONDecoder().decode([WorkoutEntry].self, from: data) {
-            entries = decoded
+    private func load() {
+        if let data = UserDefaults.standard.data(forKey: key),
+           let arr = try? JSONDecoder().decode([WorkoutEntry].self, from: data) {
+            entryDict = Dictionary(uniqueKeysWithValues: arr.map { (Self.dateKey($0.date), $0) })
+            entries = arr.sorted { $0.date > $1.date }
         }
+    }
+
+    static func dateKey(_ date: Date) -> String {
+        let c = Calendar.current
+        let comps = c.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", comps.year ?? 0, comps.month ?? 0, comps.day ?? 0)
     }
 }
 
 struct WorkoutEntry: Identifiable, Codable {
     var id: UUID = UUID()
-    let date: Date
-    let type: String
-    let duration: Int
-    let calories: Int
-    let mood: Mood
-    let difficulty: Difficulty
-    let notes: String
+    var date: Date
+    var exercises: [ExerciseItem]
+    var notes: String = ""
+    var calories: Int = 0
+    var type: String = ""
+    var duration: Int = 0
+    var mood: Mood = .good
+    var difficulty: Difficulty = .moderate
+    
+    init(date: Date, exercises: [ExerciseItem] = [], notes: String = "", calories: Int = 0, type: String = "", duration: Int = 0, mood: Mood = .good, difficulty: Difficulty = .moderate) {
+        self.date = date
+        self.exercises = exercises
+        self.notes = notes
+        self.calories = calories
+        self.type = type
+        self.duration = duration
+        self.mood = mood
+        self.difficulty = difficulty
+    }
+}
+
+struct ExerciseItem: Identifiable, Codable, Hashable {
+    var id = UUID()
+    var name: String
+    var sets: Int
+    var reps: Int
+    var weight: Double?
+    var duration: Int?
+    var isCompleted: Bool = false
 }
 
 enum Mood: String, CaseIterable, Codable {
@@ -1713,4 +1391,159 @@ struct Profile: Codable {
     let fitnessLevel: String
     let equipment: [String]
     let goals: [String]
+}
+
+class GPTService: ObservableObject {
+    @Published var messages: [ChatMessage] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    private let model: GenerativeModel
+    
+    init() {
+        let apiKey = "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
+        model = GenerativeModel(name: "gemini-1.5-flash-latest", apiKey: apiKey)
+    }
+    
+    func sendMessage(_ content: String) async {
+        let userMessage = ChatMessage(id: UUID(), content: content, isUser: true, timestamp: Date())
+        
+        await MainActor.run {
+            messages.append(userMessage)
+            isLoading = true
+            errorMessage = nil
+        }
+        
+        do {
+            let response = try await model.generateContent(content)
+            let assistantMessage = ChatMessage(id: UUID(), content: response.text ?? "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
+            
+            await MainActor.run {
+                messages.append(assistantMessage)
+                isLoading = false
+            }
+        } catch {
+            let errorMessage = ChatMessage(id: UUID(), content: "Sorry, I didn't quite catch that – could you rephrase?", isUser: false, timestamp: Date())
+            
+            await MainActor.run {
+                messages.append(errorMessage)
+                isLoading = false
+            }
+        }
+    }
+    
+    func generateWorkoutPlan(profile: Profile) async -> String {
+        let prompt = """
+        Create a personalized workout plan for \(profile.name) with the following details:
+        - Age: \(profile.age)
+        - Height: \(profile.height) cm
+        - Weight: \(profile.weight) kg
+        - Gender: \(profile.gender)
+        - Fitness Level: \(profile.fitnessLevel)
+        - Equipment: \(profile.equipment.joined(separator: ", "))
+        - Goals: \(profile.goals.joined(separator: ", "))
+        
+        Rules:
+        1. Use ONLY body-weight exercises unless specific equipment is listed
+        2. No dumbbells or heavy weights unless explicitly mentioned
+        3. Create a 3-day plan with clear day sections
+        4. Include sets, reps, and rest periods
+        5. Format as readable text, not JSON
+        6. Keep it beginner-friendly and safe
+        """
+        
+        do {
+            let response = try await model.generateContent(prompt)
+            return response.text ?? "Sorry, I couldn't generate a workout plan right now."
+        } catch {
+            return "Sorry, I couldn't generate a workout plan right now."
+        }
+    }
+    
+    func clearMessages() {
+        messages.removeAll()
+    }
+    
+    func generateRoutine(prompt: String) async -> String {
+        do {
+            print("Sending prompt to Gemini API...") // Debug: Log API call
+            let response = try await model.generateContent(prompt)
+            print("Received response from Gemini API") // Debug: Log successful response
+            if let text = response.text {
+                return text
+            }
+            print("No text in response") // Debug: Log empty response
+            return "I apologize, but I couldn't generate a response. Please try again."
+        } catch {
+            print("Detailed error: \(error)") // Debug: Log detailed error
+            let nsError = error as NSError
+            print("Error domain: \(nsError.domain)")
+            print("Error code: \(nsError.code)")
+            print("Error description: \(nsError.localizedDescription)")
+            print("Error user info: \(nsError.userInfo)")
+            
+            // Return a more specific error message based on the error
+            if nsError.domain == "GoogleGenerativeAI.GenerateContentError" {
+                return "I apologize, but there seems to be an issue with the AI service configuration. Please try again later."
+            }
+            return "I apologize, but I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+        }
+    }
+}
+
+class CalendarManager: ObservableObject {
+    private let store = EKEventStore()
+    
+    init() {
+        requestAccess()
+    }
+    
+    private func requestAccess() {
+        // Request calendar access with proper error handling using new iOS 17+ API
+        if #available(iOS 17.0, *) {
+            store.requestFullAccessToEvents { granted, error in
+                if let error = error {
+                    print("Error requesting calendar access: \(error)")
+                }
+                if !granted {
+                    print("Calendar access not granted")
+                }
+            }
+        } else {
+            // Fallback for older iOS versions
+            store.requestAccess(to: .event) { granted, error in
+                if let error = error {
+                    print("Error requesting calendar access: \(error)")
+                }
+                if !granted {
+                    print("Calendar access not granted")
+                }
+            }
+        }
+    }
+    
+    func addWorkout(title: String, offsetMinutes: Double) throws {
+        // Check calendar authorization status using new iOS 17+ API
+        let status: EKAuthorizationStatus
+        if #available(iOS 17.0, *) {
+            status = EKEventStore.authorizationStatus(for: .event)
+        } else {
+            status = EKEventStore.authorizationStatus(for: .event)
+        }
+        
+        guard status == .authorized || status == .fullAccess else {
+            throw NSError(domain: "CalendarError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Calendar access not authorized"])
+        }
+        
+        guard let cal = store.defaultCalendarForNewEvents else {
+            throw NSError(domain: "CalendarError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No default calendar found"])
+        }
+        
+        let event = EKEvent(eventStore: store)
+        event.calendar = cal
+        event.title = title
+        event.startDate = Date().addingTimeInterval(offsetMinutes*60)
+        event.endDate = event.startDate.addingTimeInterval(60*60)
+        try store.save(event, span: .thisEvent)
+    }
 }
