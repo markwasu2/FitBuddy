@@ -157,7 +157,7 @@ class ChatEngine: ObservableObject {
     
     private func generateWorkoutResponse() -> ChatResponse {
         let workout = createSampleWorkout()
-        let entry = WorkoutEntry(
+        _ = WorkoutEntry(
             date: Date(),
             exercises: workout,
             type: "Strength Training",

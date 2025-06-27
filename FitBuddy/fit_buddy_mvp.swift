@@ -83,6 +83,7 @@ struct FitBuddyApp: App {
                     .environmentObject(calendarManager)
                     .environmentObject(chatEngine)
                     .environmentObject(geminiService)
+                    .preferredColorScheme(.dark)
             } else {
                 OnboardingView()
                     .environmentObject(profileManager)
@@ -93,9 +94,9 @@ struct FitBuddyApp: App {
                     .environmentObject(calendarManager)
                     .environmentObject(chatEngine)
                     .environmentObject(geminiService)
+                    .preferredColorScheme(.dark)
             }
         }
-        .preferredColorScheme(.dark)
     }
 }
 
