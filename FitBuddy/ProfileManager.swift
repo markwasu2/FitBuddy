@@ -9,9 +9,13 @@ class ProfileManager: ObservableObject {
     @Published var equipment: [String] = []
     @Published var fitnessLevel: String = "Intermediate"
     @Published var isOnboarded: Bool = true
+    @Published var isOnboardingComplete: Bool = true
+    @Published var gender: String = "Not specified"
+    @Published var goals: [String] = []
     
     func completeOnboarding() {
         isOnboarded = true
+        isOnboardingComplete = true
     }
     
     func update(name: String, age: Int, weightLbs: Int, heightInches: Int, intensity: Int, equipment: [String]) {

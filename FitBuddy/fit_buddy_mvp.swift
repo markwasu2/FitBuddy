@@ -73,18 +73,29 @@ struct FitBuddyApp: App {
     
     var body: some Scene {
         WindowGroup {
-            ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
-                .environmentObject(profileManager)
-                .environmentObject(workoutPlanManager)
-                .environmentObject(workoutJournal)
-                .environmentObject(healthKitManager)
-                .environmentObject(notificationManager)
-                .environmentObject(calendarManager)
-                .environmentObject(chatEngine)
-                .environmentObject(geminiService)
-                .preferredColorScheme(.dark)
+            if profileManager.isOnboardingComplete {
+                MainTabView()
+                    .environmentObject(profileManager)
+                    .environmentObject(workoutPlanManager)
+                    .environmentObject(workoutJournal)
+                    .environmentObject(healthKitManager)
+                    .environmentObject(notificationManager)
+                    .environmentObject(calendarManager)
+                    .environmentObject(chatEngine)
+                    .environmentObject(geminiService)
+            } else {
+                OnboardingView()
+                    .environmentObject(profileManager)
+                    .environmentObject(workoutPlanManager)
+                    .environmentObject(workoutJournal)
+                    .environmentObject(healthKitManager)
+                    .environmentObject(notificationManager)
+                    .environmentObject(calendarManager)
+                    .environmentObject(chatEngine)
+                    .environmentObject(geminiService)
+            }
         }
+        .preferredColorScheme(.dark)
     }
 }
 

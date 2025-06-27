@@ -133,15 +133,15 @@ struct ModernChatBubble: View {
 // MARK: - Chat Message Model
 
 struct ChatMessage: Identifiable {
-    let id: UUID
+    let id = UUID()
     let content: String
-    let isUser: Bool
+    let isFromUser: Bool
     let timestamp: Date
-    var actions: [ChatAction] = []
     
-    struct ChatAction {
-        let title: String
-        let action: () -> Void
+    init(content: String, isFromUser: Bool, timestamp: Date = Date()) {
+        self.content = content
+        self.isFromUser = isFromUser
+        self.timestamp = timestamp
     }
 }
 
