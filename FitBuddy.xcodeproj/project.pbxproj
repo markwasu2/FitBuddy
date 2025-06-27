@@ -33,9 +33,22 @@
 		96A7D2172E00881200D41CBF /* FitBuddyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FitBuddyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		96E10CED2E0B5BF400249DD9 /* Exceptions for "FitBuddy" folder in "FitBuddy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 96A7D1FA2E00881100D41CBF /* FitBuddy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		96A7D1FD2E00881100D41CBF /* FitBuddy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				96E10CED2E0B5BF400249DD9 /* Exceptions for "FitBuddy" folder in "FitBuddy" target */,
+			);
 			path = FitBuddy;
 			sourceTree = "<group>";
 		};
@@ -410,6 +423,7 @@
 				ENABLE_PREVIEWS = YES;
 				GEMINI_API_KEY = AIzaSyDmmEcuDDv64F6nJCFGTq2iFVS1lNxusHk;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FitBuddy/Info.plist;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FitBuddy needs calendar access to schedule your workouts.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FitBuddy needs microphone access to record your voice for speech recognition.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FitBuddy uses speech recognition to understand your voice commands and update your fitness profile.";
@@ -442,6 +456,7 @@
 				ENABLE_PREVIEWS = YES;
 				GEMINI_API_KEY = "";
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FitBuddy/Info.plist;
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "FitBuddy needs calendar access to schedule your workouts.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "FitBuddy needs microphone access to record your voice for speech recognition.";
 				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "FitBuddy uses speech recognition to understand your voice commands and update your fitness profile.";

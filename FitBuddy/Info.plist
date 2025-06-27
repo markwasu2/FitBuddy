@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCalendarsUsageDescription</key>
+	<string>FitBuddy needs access to your calendar to schedule your workouts and send you reminders.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>FitBuddy needs full access to your calendar to create and manage your workout schedule.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>FitBuddy uses your health data to track workouts, steps, heart rate, and show your fitness progress.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>FitBuddy writes your workout and activity data to Health to help you track your fitness progress.</string>
+</dict>
+</plist>
