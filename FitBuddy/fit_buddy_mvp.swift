@@ -63,26 +63,26 @@ struct CardShadow: ViewModifier {
 struct FitBuddyApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var profileManager = ProfileManager()
-    @StateObject private var gptService = GPTService()
     @StateObject private var workoutPlanManager = WorkoutPlanManager()
     @StateObject private var workoutJournal = WorkoutJournal()
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var notificationManager = NotificationManager()
     @StateObject private var calendarManager = CalendarManager()
     @StateObject private var chatEngine = ChatEngine()
+    @StateObject private var geminiService = GeminiService()
     
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(profileManager)
-                .environmentObject(gptService)
                 .environmentObject(workoutPlanManager)
                 .environmentObject(workoutJournal)
                 .environmentObject(healthKitManager)
                 .environmentObject(notificationManager)
                 .environmentObject(calendarManager)
                 .environmentObject(chatEngine)
+                .environmentObject(geminiService)
                 .preferredColorScheme(.dark)
         }
     }
@@ -636,7 +636,6 @@ struct MainTabView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @EnvironmentObject var workoutJournal: WorkoutJournal
     @EnvironmentObject var calendarManager: CalendarManager
-    @EnvironmentObject var gptService: GPTService
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var notificationManager: NotificationManager
     @EnvironmentObject var chatEngine: ChatEngine

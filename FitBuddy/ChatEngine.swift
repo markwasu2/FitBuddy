@@ -81,27 +81,34 @@ struct PlanPatch {
     }
 }
 
+class GeminiService: ObservableObject {
+    func sendMessage(_ message: String) -> String {
+        return "Gemini response to: \(message)"
+    }
+}
+
 class ChatEngine: ObservableObject {
+    @Published var messages: [ChatMessage] = []
     @Published var currentStage: ChatStage = .idle
     @Published var currentQuestionIndex: QIndex = .name
     
     private var profileManager: ProfileManager
     private var workoutJournal: WorkoutJournal
     private var calendarManager: CalendarManager
-    private var gptService: GPTService
+    private var geminiService: GeminiService
     
-    init(profileManager: ProfileManager, workoutJournal: WorkoutJournal, calendarManager: CalendarManager, gptService: GPTService) {
+    init(profileManager: ProfileManager = ProfileManager(), workoutJournal: WorkoutJournal = WorkoutJournal(), calendarManager: CalendarManager = CalendarManager(), geminiService: GeminiService = GeminiService()) {
         self.profileManager = profileManager
         self.workoutJournal = workoutJournal
         self.calendarManager = calendarManager
-        self.gptService = gptService
+        self.geminiService = geminiService
     }
     
-    func updateDependencies(profileManager: ProfileManager, workoutJournal: WorkoutJournal, calendarManager: CalendarManager, gptService: GPTService) {
+    func updateDependencies(profileManager: ProfileManager, workoutJournal: WorkoutJournal, calendarManager: CalendarManager, geminiService: GeminiService) {
         self.profileManager = profileManager
         self.workoutJournal = workoutJournal
         self.calendarManager = calendarManager
-        self.gptService = gptService
+        self.geminiService = geminiService
     }
     
     func handle(userInput: String) -> ChatResponse {
@@ -183,7 +190,7 @@ class ChatEngine: ObservableObject {
     }
     
     private func handleQA(input: String) -> ChatResponse {
-        // Pass to GPT service for general fitness questions
+        // Pass to Gemini service for general fitness questions
         return ChatResponse(text: "Let me help you with that question!", stage: .qa, actions: [.none])
     }
     
@@ -342,4 +349,16 @@ class ChatEngine: ObservableObject {
         
         return nil
     }
+    
+    func sendMessage(_ message: String) {
+        let response = geminiService.sendMessage(message)
+        messages.append(ChatMessage(content: message, isFromUser: true))
+        messages.append(ChatMessage(content: response, isFromUser: false))
+    }
+}
+
+struct ChatMessage: Identifiable {
+    let id = UUID()
+    let content: String
+    let isFromUser: Bool
 } 
