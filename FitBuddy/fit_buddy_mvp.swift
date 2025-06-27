@@ -836,7 +836,7 @@ struct ChatbotView: View {
         case .createPlan:
             // Plan is already created in the response
             break
-        case .schedulePlan(let date):
+        case .schedulePlan(_):
             // Schedule in calendar
             do {
                 try calendarManager.addWorkout(title: "Workout - Strength Training", offsetMinutes: 0)

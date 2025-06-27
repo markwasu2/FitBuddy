@@ -54,7 +54,7 @@ extension WorkoutPlan {
     }
     
     private mutating func addExercise(_ exerciseName: String, to day: Int) {
-        let newExercise = Exercise(
+        _ = Exercise(
             id: UUID(),
             name: exerciseName,
             sets: 3,
