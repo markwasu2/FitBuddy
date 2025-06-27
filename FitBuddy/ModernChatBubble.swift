@@ -8,7 +8,7 @@ struct ModernChatBubble: View {
     
     var body: some View {
         HStack {
-            if message.isUser {
+            if message.isFromUser {
                 Spacer()
                 userBubble
             } else {
