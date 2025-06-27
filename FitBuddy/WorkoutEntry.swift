@@ -8,4 +8,5 @@ struct WorkoutEntry: Identifiable {
     var duration: Int
     var mood: String
     var difficulty: String
+    var calories: Int = 0
 } 

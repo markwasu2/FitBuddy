@@ -337,7 +337,7 @@ struct WorkoutJournalList: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach(workoutJournal.entries.sorted { $0.date > $1.date }) { entry in
+                ForEach(workoutJournal.entries) { entry in
                     NavigationLink(destination: DailyWorkoutView(date: entry.date).environmentObject(workoutJournal)) {
                         JournalCell(entry: entry)
                     }
@@ -351,8 +351,10 @@ struct WorkoutJournalList: View {
     }
     func delete(at offsets: IndexSet) {
         for idx in offsets {
-            let entry = workoutJournal.entries.sorted { $0.date > $1.date }[idx]
-            workoutJournal.delete(entry)
+            if idx < workoutJournal.entries.count {
+                let entry = workoutJournal.entries[idx]
+                workoutJournal.delete(entry)
+            }
         }
     }
 }
