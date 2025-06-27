@@ -1179,21 +1179,39 @@ class CalendarManager {
     }
     
     private func requestAccess() {
-        // Request calendar access with proper error handling
-        store.requestAccess(to: .event) { granted, error in
-            if let error = error {
-                print("Error requesting calendar access: \(error)")
+        // Request calendar access with proper error handling using new iOS 17+ API
+        if #available(iOS 17.0, *) {
+            store.requestFullAccessToEvents { granted, error in
+                if let error = error {
+                    print("Error requesting calendar access: \(error)")
+                }
+                if !granted {
+                    print("Calendar access not granted")
+                }
             }
-            if !granted {
-                print("Calendar access not granted")
+        } else {
+            // Fallback for older iOS versions
+            store.requestAccess(to: .event) { granted, error in
+                if let error = error {
+                    print("Error requesting calendar access: \(error)")
+                }
+                if !granted {
+                    print("Calendar access not granted")
+                }
             }
         }
     }
     
     func addWorkout(title: String, offsetMinutes: Double) throws {
-        // Check calendar authorization status
-        let status = EKEventStore.authorizationStatus(for: .event)
-        guard status == .authorized else {
+        // Check calendar authorization status using new iOS 17+ API
+        let status: EKAuthorizationStatus
+        if #available(iOS 17.0, *) {
+            status = EKEventStore.authorizationStatus(for: .event)
+        } else {
+            status = EKEventStore.authorizationStatus(for: .event)
+        }
+        
+        guard status == .authorized || status == .fullAccess else {
             throw NSError(domain: "CalendarError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Calendar access not authorized"])
         }
         
@@ -1226,7 +1244,9 @@ struct ScannerView: View {
             }
         }
         .padding()
-        .onChange(of: selection) { _ in classify() }
+        .onChange(of: selection) { oldValue, newValue in 
+            classify() 
+        }
     }
     func classify() {
         guard let item = selection else { return }
@@ -1402,6 +1422,17 @@ class ProfileManager: ObservableObject {
     }
     
     func saveProfile() {
+        // Save individual properties to UserDefaults
+        UserDefaults.standard.set(name, forKey: "userName")
+        UserDefaults.standard.set(age, forKey: "age")
+        UserDefaults.standard.set(height, forKey: "height")
+        UserDefaults.standard.set(weight, forKey: "weight")
+        UserDefaults.standard.set(gender, forKey: "gender")
+        UserDefaults.standard.set(fitnessLevel, forKey: "fitnessLevel")
+        UserDefaults.standard.set(equipment.joined(separator: ","), forKey: "equipment")
+        UserDefaults.standard.set(goals.joined(separator: ","), forKey: "goals")
+        
+        // Also save as Profile struct for compatibility
         let profile = Profile(
             name: name,
             age: age,

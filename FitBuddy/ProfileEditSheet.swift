@@ -31,7 +31,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Name")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             TextField("Enter your name", text: $name)
                                 .font(.system(size: 17))
                                 .textFieldStyle(.roundedBorder)
@@ -42,7 +42,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Weight")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             HStack(spacing: 16) {
                                 Picker("Weight Value", selection: $weightValue) {
                                     ForEach(30...350, id: \.self) { value in
@@ -59,7 +59,7 @@ struct ProfileEditSheet: View {
                                 .pickerStyle(.wheel)
                                 .frame(maxWidth: .infinity)
                             }
-                            .onChange(of: weightUnit) { _ in
+                            .onChange(of: weightUnit) { oldValue, newValue in
                                 // Convert weight when unit changes
                                 if weightUnit == "kg" {
                                     weightValue = Int(Double(weightValue) * 2.20462)
@@ -73,7 +73,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Height")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             
                             Picker("Height Mode", selection: $heightMode) {
                                 Text("Centimeters").tag("cm")
@@ -107,8 +107,8 @@ struct ProfileEditSheet: View {
                                     .pickerStyle(.wheel)
                                     .frame(maxWidth: .infinity)
                                 }
-                                .onChange(of: feet) { _ in updateHeightCM() }
-                                .onChange(of: inches) { _ in updateHeightCM() }
+                                .onChange(of: feet) { oldValue, newValue in updateHeightCM() }
+                                .onChange(of: inches) { oldValue, newValue in updateHeightCM() }
                             }
                         }
                         
@@ -116,7 +116,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Age")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             Picker("Age", selection: $age) {
                                 ForEach(10...100, id: \.self) { value in
                                     Text("\(value) years").tag(value)
@@ -129,7 +129,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Fitness Level")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             HStack(spacing: 12) {
                                 ForEach(levelOptions, id: \.self) { option in
                                     Button(action: { level = option }) {
@@ -137,11 +137,11 @@ struct ProfileEditSheet: View {
                                             .font(.system(size: 15, weight: .medium))
                                             .padding(.horizontal, 16)
                                             .padding(.vertical, 8)
-                                            .background(level == option ? Color(#007BFF) : Color.clear)
-                                            .foregroundColor(level == option ? .white : Color(#007BFF))
+                                            .background(level == option ? Color(red: 0/255, green: 123/255, blue: 255/255) : Color.clear)
+                                            .foregroundColor(level == option ? .white : Color(red: 0/255, green: 123/255, blue: 255/255))
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 20)
-                                                    .stroke(Color(#007BFF), lineWidth: 1)
+                                                    .stroke(Color(red: 0/255, green: 123/255, blue: 255/255), lineWidth: 1)
                                             )
                                             .cornerRadius(20)
                                     }
@@ -153,7 +153,7 @@ struct ProfileEditSheet: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Equipment")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(#8E8E93))
+                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
                             LazyVGrid(columns: [
                                 GridItem(.flexible()),
                                 GridItem(.flexible()),
@@ -171,7 +171,7 @@ struct ProfileEditSheet: View {
                                             .font(.system(size: 13, weight: .medium))
                                             .padding(.horizontal, 12)
                                             .padding(.vertical, 6)
-                                            .background(equipment.contains(option) ? Color(#007BFF) : Color(#F2F2F7))
+                                            .background(equipment.contains(option) ? Color(red: 0/255, green: 123/255, blue: 255/255) : Color(red: 242/255, green: 242/255, blue: 247/255))
                                             .foregroundColor(equipment.contains(option) ? .white : .black)
                                             .cornerRadius(16)
                                     }
@@ -204,7 +204,7 @@ struct ProfileEditSheet: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 48)
-                    .background(hasChanges ? Color(#007BFF) : Color.gray)
+                    .background(hasChanges ? Color(red: 0/255, green: 123/255, blue: 255/255) : Color.gray)
                     .cornerRadius(12)
             }
             .disabled(!hasChanges)
@@ -215,23 +215,23 @@ struct ProfileEditSheet: View {
     }
     
     private var hasChanges: Bool {
-        name != profile.profile.name ||
-        weightValue != profile.profile.weight ||
-        heightValue != profile.profile.height ||
-        age != profile.profile.age ||
-        level != profile.profile.level ||
-        equipment != Set(profile.profile.equipment)
+        name != profile.name ||
+        weightValue != profile.weight ||
+        heightValue != profile.height ||
+        age != profile.age ||
+        level != profile.fitnessLevel ||
+        equipment != Set(profile.equipment)
     }
     
     private func loadCurrentProfile() {
-        name = profile.profile.name
-        weightValue = profile.profile.weight
+        name = profile.name
+        weightValue = profile.weight
         weightUnit = "lbs"
-        heightValue = profile.profile.height
+        heightValue = profile.height
         heightUnit = "cm"
-        age = profile.profile.age
-        level = profile.profile.level
-        equipment = Set(profile.profile.equipment)
+        age = profile.age
+        level = profile.fitnessLevel
+        equipment = Set(profile.equipment)
         
         // Convert height to feet/inches for display
         let totalInches = Int(Double(heightValue) / 2.54)
@@ -248,14 +248,14 @@ struct ProfileEditSheet: View {
         // Convert weight to lbs if needed
         let weightInLbs = weightUnit == "kg" ? Int(Double(weightValue) * 2.20462) : weightValue
         
-        profile.profile.name = name
-        profile.profile.weight = weightInLbs
-        profile.profile.height = heightValue
-        profile.profile.age = age
-        profile.profile.level = level
-        profile.profile.equipment = Array(equipment)
+        profile.name = name
+        profile.weight = weightInLbs
+        profile.height = heightValue
+        profile.age = age
+        profile.fitnessLevel = level
+        profile.equipment = Array(equipment)
         
-        profile.save()
+        profile.saveProfile()
         presentationMode.wrappedValue.dismiss()
     }
 } 
