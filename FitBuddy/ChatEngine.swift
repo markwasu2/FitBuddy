@@ -24,12 +24,6 @@ struct ChatResponse {
     let actions: [ChatAction]
 }
 
-class GeminiService: ObservableObject {
-    func sendMessage(_ message: String) -> String {
-        return "Gemini response to: \(message)"
-    }
-}
-
 class ChatEngine: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var currentStage: ChatStage = .idle

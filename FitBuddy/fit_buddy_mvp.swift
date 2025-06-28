@@ -68,7 +68,6 @@ struct FitBuddyApp: App {
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var notificationManager = NotificationManager()
     @StateObject private var calendarManager = CalendarManager()
-    @StateObject private var chatEngine = ChatEngine()
     @StateObject private var geminiService = GeminiService()
     
     var body: some Scene {
@@ -81,7 +80,6 @@ struct FitBuddyApp: App {
                     .environmentObject(healthKitManager)
                     .environmentObject(notificationManager)
                     .environmentObject(calendarManager)
-                    .environmentObject(chatEngine)
                     .environmentObject(geminiService)
                     .preferredColorScheme(.dark)
                     .onAppear {
@@ -95,7 +93,6 @@ struct FitBuddyApp: App {
                     .environmentObject(healthKitManager)
                     .environmentObject(notificationManager)
                     .environmentObject(calendarManager)
-                    .environmentObject(chatEngine)
                     .environmentObject(geminiService)
                     .preferredColorScheme(.dark)
                     .onAppear {
@@ -675,7 +672,7 @@ struct MainTabView: View {
     @EnvironmentObject var calendarManager: CalendarManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var notificationManager: NotificationManager
-    @EnvironmentObject var chatEngine: ChatEngine
+    @EnvironmentObject var geminiService: GeminiService
     
     var body: some View {
         TabView {
@@ -1017,22 +1014,46 @@ struct WorkoutCard: View {
 
 // MARK: - Coach Screen
 struct CoachScreen: View {
-    @EnvironmentObject var chatEngine: ChatEngine
+    @EnvironmentObject var geminiService: GeminiService
     @State private var messageText = ""
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Chat messages
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(chatEngine.messages) { message in
-                            ChatBubble(message: message)
+                // Chat messages with ScrollViewReader for auto-scrolling
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(geminiService.messages) { message in
+                                ChatBubble(message: message)
+                                    .id(message.id)
+                            }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: geminiService.messages.count) { _ in
+                        if let last = geminiService.messages.last {
+                            withAnimation(.easeOut(duration: 0.3)) {
+                                proxy.scrollTo(last.id, anchor: .bottom)
+                            }
                         }
                     }
-                    .padding()
+                    .background(Color(hex: "#0D0D1A"))
                 }
-                .background(Color(hex: "#0D0D1A"))
+                
+                // Loading indicator
+                if geminiService.isProcessing {
+                    HStack {
+                        ProgressView()
+                            .scaleEffect(0.8)
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "#7C3AED")))
+                        Text("Thinking...")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                    }
+                    .padding(.vertical, 8)
+                    .background(Color(hex: "#0D0D1A"))
+                }
                 
                 // Suggestion chips
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -1064,17 +1085,23 @@ struct CoachScreen: View {
                         .background(Color(hex: "#1C1C2E"))
                         .cornerRadius(25)
                         .foregroundColor(.white)
+                        .disabled(geminiService.isProcessing)
                     
                     Button(action: {
-                        if !messageText.isEmpty {
-                            chatEngine.sendMessage(messageText)
-                            messageText = ""
+                        if !messageText.isEmpty && !geminiService.isProcessing {
+                            Task {
+                                await geminiService.sendMessage(messageText)
+                                await MainActor.run {
+                                    messageText = ""
+                                }
+                            }
                         }
                     }) {
-                        Image(systemName: "arrow.up.circle.fill")
+                        Image(systemName: geminiService.isProcessing ? "clock" : "arrow.up.circle.fill")
                             .font(.title2)
-                            .foregroundColor(Color(hex: "#7C3AED"))
+                            .foregroundColor(geminiService.isProcessing ? Color(hex: "#6B7280") : Color(hex: "#7C3AED"))
                     }
+                    .disabled(geminiService.isProcessing)
                 }
                 .padding()
                 .background(Color(hex: "#0D0D1A"))
