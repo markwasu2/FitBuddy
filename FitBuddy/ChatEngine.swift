@@ -59,10 +59,13 @@ class ChatEngine: ObservableObject {
     func processInput(_ input: String) {
         isProcessing = true
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let response = self.handleInput(input)
-            self.currentResponse = response
-            self.isProcessing = false
+        Task {
+            let response = await geminiService.sendMessage(input)
+            
+            await MainActor.run {
+                self.currentResponse = ChatResponse(text: response, stage: .idle, actions: [.generateWorkout, .askQuestion])
+                self.isProcessing = false
+            }
         }
     }
     
@@ -197,7 +200,12 @@ class ChatEngine: ObservableObject {
     }
     
     func generateWorkout() {
-        currentResponse = generateWorkoutResponse()
+        Task {
+            let response = await geminiService.sendMessage("Generate a workout plan for me")
+            await MainActor.run {
+                self.currentResponse = ChatResponse(text: response, stage: .idle, actions: [.generateWorkout, .askQuestion])
+            }
+        }
     }
     
     func askQuestion() {
@@ -229,10 +237,9 @@ class ChatEngine: ObservableObject {
     }
     
     func sendMessage(_ message: String) {
-        messages.append(ChatMessage(content: message, isFromUser: true))
-        
-        // Mock AI response
-        let response = "Thanks for your message: \(message). I'm here to help with your fitness journey!"
-        messages.append(ChatMessage(content: response, isFromUser: false))
+        Task {
+            let response = await geminiService.sendMessage(message)
+            // Response is already added to geminiService.messages
+        }
     }
 } 

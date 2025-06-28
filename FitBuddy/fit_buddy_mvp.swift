@@ -84,6 +84,9 @@ struct FitBuddyApp: App {
                     .environmentObject(chatEngine)
                     .environmentObject(geminiService)
                     .preferredColorScheme(.dark)
+                    .onAppear {
+                        configureGeminiService()
+                    }
             } else {
                 OnboardingView()
                     .environmentObject(profileManager)
@@ -95,7 +98,29 @@ struct FitBuddyApp: App {
                     .environmentObject(chatEngine)
                     .environmentObject(geminiService)
                     .preferredColorScheme(.dark)
+                    .onAppear {
+                        configureGeminiService()
+                    }
             }
+        }
+    }
+    
+    private func configureGeminiService() {
+        geminiService.configure(
+            profileManager: profileManager,
+            calendarManager: calendarManager,
+            workoutPlanManager: workoutPlanManager
+        )
+        
+        // Set up helper closures
+        geminiService.scheduleWorkout = { date, time, title in
+            // Schedule workout in calendar
+            calendarManager.addEvent(title: title, date: date, time: time)
+        }
+        
+        geminiService.updateProfile = { text in
+            // Update profile from chat
+            profileManager.updateProfile(text)
         }
     }
 }
