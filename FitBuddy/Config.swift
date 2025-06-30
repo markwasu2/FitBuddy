@@ -4,11 +4,10 @@ struct Config {
     // MARK: - API Configuration
     static let geminiAPIKey: String = {
         // First try to get from environment variable (for production)
-        if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"] {
+        if let envKey = ProcessInfo.processInfo.environment["GEMINI_API_KEY"], !envKey.isEmpty {
             return envKey
         }
-        
-        // Use the actual API key that was already working
+        // Use the provided API key
         return "AIzaSyARrgAbADRJL7UU99Q0qAcKdQC18Xxf8Yc"
     }()
     

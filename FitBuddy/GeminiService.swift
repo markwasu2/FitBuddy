@@ -12,6 +12,11 @@ class GeminiService: ObservableObject {
     private var calendarManager: CalendarManager?
     private var workoutPlanManager: WorkoutPlanManager?
     
+    // Conversation memory and context
+    private var conversationContext: [String] = []
+    private var userProfile: [String: Any] = [:]
+    private var currentWorkoutPlan: String = ""
+    
     // Helper closures for external actions
     var scheduleWorkout: ((Date, String, String) -> Void)?
     var updateProfile: ((String) -> Void)?
@@ -31,6 +36,22 @@ class GeminiService: ObservableObject {
         self.profileManager = profileManager
         self.calendarManager = calendarManager
         self.workoutPlanManager = workoutPlanManager
+        
+        // Initialize user profile context
+        updateUserProfileContext()
+    }
+    
+    private func updateUserProfileContext() {
+        guard let profile = profileManager else { return }
+        
+        userProfile = [
+            "age": profile.age,
+            "weight": profile.weight,
+            "height": profile.height,
+            "fitnessLevel": profile.fitnessLevel,
+            "goals": profile.goals.joined(separator: ", "),
+            "equipment": profile.equipment.joined(separator: ", ")
+        ]
     }
     
     func sendMessage(_ message: String) async -> String {
@@ -43,11 +64,14 @@ class GeminiService: ObservableObject {
             self.messages.append(ChatMessage(content: message, isFromUser: true, timestamp: Date()))
         }
         
-        // Classify intent
-        let intent = classifyIntent(message)
+        // Update conversation context
+        conversationContext.append("User: \(message)")
         
-        // Generate response based on intent
-        let response = await generateResponse(for: intent, userMessage: message)
+        // Classify intent with context
+        let intent = classifyIntent(message, context: conversationContext)
+        
+        // Generate response based on intent with full context
+        let response = await generateResponse(for: intent, userMessage: message, context: conversationContext)
         
         // TECHNICAL HOT-FIX: Ensure we never have blank responses
         let replyText: String
@@ -58,11 +82,19 @@ class GeminiService: ObservableObject {
             replyText = "⚠️ I'm having trouble generating that. Could you rephrase?"
         }
         
+        // Add assistant response to conversation context
+        conversationContext.append("Assistant: \(replyText)")
+        
         // Add assistant response to conversation on main thread
         await MainActor.run {
             self.messages.append(ChatMessage(content: replyText, isFromUser: false, timestamp: Date()))
             
-            // Trim conversation to last 50 turns to avoid performance stalls
+            // Trim conversation to last 20 turns to maintain context without performance issues
+            if self.conversationContext.count > 20 {
+                self.conversationContext = Array(self.conversationContext.suffix(20))
+            }
+            
+            // Trim UI messages to last 50 for performance
             if self.messages.count > 50 {
                 let welcomeMessage = self.messages.first!
                 self.messages = [welcomeMessage] + self.messages.suffix(49)
@@ -74,8 +106,15 @@ class GeminiService: ObservableObject {
         return replyText
     }
     
-    private func classifyIntent(_ message: String) -> MessageIntent {
+    private func classifyIntent(_ message: String, context: [String]) -> MessageIntent {
         let lowercased = message.lowercased()
+        let contextString = context.joined(separator: " ").lowercased()
+        
+        // Check if we already have profile info in context
+        let hasProfileInfo = !userProfile.isEmpty && userProfile["age"] as? Int != 0
+        
+        // Check if we already discussed workout plans
+        let hasWorkoutContext = contextString.contains("workout") || contextString.contains("plan") || !currentWorkoutPlan.isEmpty
         
         if lowercased.contains("workout") && (lowercased.contains("plan") || lowercased.contains("routine") || lowercased.contains("split")) {
             return .workoutPlanRequest
@@ -100,35 +139,44 @@ class GeminiService: ObservableObject {
         return .other
     }
     
-    private func generateResponse(for intent: MessageIntent, userMessage: String) async -> String {
+    private func generateResponse(for intent: MessageIntent, userMessage: String, context: [String]) async -> String {
         switch intent {
         case .workoutPlanRequest:
-            return await handleWorkoutPlanRequest(userMessage)
+            return await handleWorkoutPlanRequest(userMessage, context: context)
         case .workoutPlanEdit:
-            return await handleWorkoutPlanEdit(userMessage)
+            return await handleWorkoutPlanEdit(userMessage, context: context)
         case .scheduleConfirmation:
-            return await handleScheduleConfirmation(userMessage)
+            return await handleScheduleConfirmation(userMessage, context: context)
         case .profileUpdate:
-            return await handleProfileUpdate(userMessage)
+            return await handleProfileUpdate(userMessage, context: context)
         case .generalFitnessQuestion:
-            return await handleGeneralFitnessQuestion(userMessage)
+            return await handleGeneralFitnessQuestion(userMessage, context: context)
         case .other:
-            return await handleGeneralQuery(userMessage)
+            return await handleGeneralQuery(userMessage, context: context)
         }
     }
     
-    private func handleWorkoutPlanRequest(_ message: String) async -> String {
+    private func handleWorkoutPlanRequest(_ message: String, context: [String]) async -> String {
+        // Check if we already have a workout plan in context
+        if !currentWorkoutPlan.isEmpty {
+            return "I already created a workout plan for you! Here it is:\n\n\(currentWorkoutPlan)\n\nWould you like me to modify it or schedule the sessions?"
+        }
+        
         // Check for missing profile info
         let missingInfo = getMissingProfileInfo()
         if !missingInfo.isEmpty {
             return "I need a bit more info to create your perfect workout plan. \(missingInfo)"
         }
         
-        // Generate workout plan using Gemini
+        // Generate workout plan using Gemini with full context
+        let contextString = context.joined(separator: "\n")
         let prompt = """
-        Create a personalized 3-day workout plan for a \(profileManager?.fitnessLevel ?? "intermediate") level person.
+        Conversation context:
+        \(contextString)
         
-        Profile: Age \(profileManager?.age ?? 30), Weight \(profileManager?.weight ?? 150) lbs, Goals: \(profileManager?.goals.joined(separator: ", ") ?? "general fitness"), Equipment: \(profileManager?.equipment.joined(separator: ", ") ?? "basic")
+        User profile: \(userProfile)
+        
+        Create a personalized 3-day workout plan. The user has already provided their profile info, so don't ask for it again.
         
         Format as:
         **Day 1 - [Focus]**
@@ -140,28 +188,66 @@ class GeminiService: ObservableObject {
         do {
             let response = try await model.generateContent(prompt)
             let plan = response.text ?? "I couldn't generate a workout plan right now."
+            
+            // Store the workout plan in context
+            currentWorkoutPlan = plan
+            
             return plan + "\n\nWould you like me to schedule these sessions in your calendar?"
         } catch {
-            return "Here's a solid 3-day plan for you:\n\n**Day 1 - Upper Body**\n• Push-ups — 3x12 @ moderate (60s rest)\n• Dumbbell rows — 3x10 @ moderate (60s rest)\n• Shoulder press — 3x8 @ moderate (90s rest)\n\n**Day 2 - Lower Body**\n• Squats — 3x15 @ moderate (60s rest)\n• Lunges — 3x10 each leg @ moderate (60s rest)\n• Glute bridges — 3x12 @ moderate (45s rest)\n\n**Day 3 - Full Body**\n• Burpees — 3x8 @ high intensity (90s rest)\n• Plank — 3x30s @ moderate (45s rest)\n• Mountain climbers — 3x20 @ moderate (60s rest)\n\nWould you like me to schedule these sessions in your calendar?"
+            let fallbackPlan = """
+            Here's a solid 3-day plan for you:
+            
+            **Day 1 - Upper Body**
+            • Push-ups — 3x12 @ moderate (60s rest)
+            • Dumbbell rows — 3x10 @ moderate (60s rest)
+            • Shoulder press — 3x8 @ moderate (90s rest)
+            
+            **Day 2 - Lower Body**
+            • Squats — 3x15 @ moderate (60s rest)
+            • Lunges — 3x10 each leg @ moderate (60s rest)
+            • Glute bridges — 3x12 @ moderate (45s rest)
+            
+            **Day 3 - Full Body**
+            • Burpees — 3x8 @ high intensity (90s rest)
+            • Plank — 3x30s @ moderate (45s rest)
+            • Mountain climbers — 3x20 @ moderate (60s rest)
+            """
+            
+            currentWorkoutPlan = fallbackPlan
+            return fallbackPlan + "\n\nWould you like me to schedule these sessions in your calendar?"
         }
     }
     
-    private func handleWorkoutPlanEdit(_ message: String) async -> String {
+    private func handleWorkoutPlanEdit(_ message: String, context: [String]) async -> String {
+        let contextString = context.joined(separator: "\n")
         let prompt = """
+        Conversation context:
+        \(contextString)
+        
+        Current workout plan:
+        \(currentWorkoutPlan)
+        
         The user wants to modify their workout plan: "\(message)"
         
-        Provide a specific, actionable response about how to modify their workout. Be direct and helpful.
+        Provide a specific, actionable response about how to modify their workout. Be direct and helpful. If they want to change specific exercises, provide the updated exercise with sets/reps.
         """
         
         do {
             let response = try await model.generateContent(prompt)
-            return response.text ?? "I'll help you modify your workout plan. What specific changes would you like to make?"
+            let modification = response.text ?? "I'll help you modify your workout plan. What specific changes would you like to make?"
+            
+            // Update the current workout plan if it's a substantial change
+            if modification.contains("**Day") || modification.contains("•") {
+                currentWorkoutPlan = modification
+            }
+            
+            return modification
         } catch {
             return "I'll help you modify your workout plan. What specific changes would you like to make?"
         }
     }
     
-    private func handleScheduleConfirmation(_ message: String) async -> String {
+    private func handleScheduleConfirmation(_ message: String, context: [String]) async -> String {
         // Parse date/time and schedule
         if let (date, time) = DateParser.parse(message) {
             scheduleWorkout?(date, time, "Workout Session")
@@ -170,16 +256,25 @@ class GeminiService: ObservableObject {
         return "I couldn't understand the date/time. Could you try again? (e.g., 'Tuesday 7am' or 'tomorrow at 6pm')"
     }
     
-    private func handleProfileUpdate(_ message: String) async -> String {
+    private func handleProfileUpdate(_ message: String, context: [String]) async -> String {
+        // Update profile context
         updateProfile?(message)
-        return "Profile updated successfully! I've noted your changes."
+        updateUserProfileContext()
+        
+        return "Profile updated successfully! I've noted your changes. Now I can create better workout plans for you."
     }
     
-    private func handleGeneralFitnessQuestion(_ message: String) async -> String {
+    private func handleGeneralFitnessQuestion(_ message: String, context: [String]) async -> String {
+        let contextString = context.joined(separator: "\n")
         let prompt = """
+        Conversation context:
+        \(contextString)
+        
+        User profile: \(userProfile)
+        
         Answer this fitness question: "\(message)"
         
-        Provide 3 actionable bullet points. Be direct, practical, and specific. No fluff.
+        Provide 3 actionable bullet points. Be direct, practical, and specific. No fluff. Use the user's profile info to personalize the advice.
         """
         
         do {
@@ -190,16 +285,22 @@ class GeminiService: ObservableObject {
         }
     }
     
-    private func handleGeneralQuery(_ message: String) async -> String {
+    private func handleGeneralQuery(_ message: String, context: [String]) async -> String {
+        let contextString = context.joined(separator: "\n")
         let prompt = """
+        Conversation context:
+        \(contextString)
+        
+        User profile: \(userProfile)
+        
         The user said: "\(message)"
         
-        You are a fitness coach. Respond proactively and helpfully. If they're asking for something unclear, suggest specific options like:
+        You are a fitness coach. Respond proactively and helpfully. Use the conversation context to avoid repeating yourself. If they're asking for something unclear, suggest specific options like:
         - "Want a workout plan? I can create one for you."
         - "Need fitness advice? Ask me anything specific."
         - "Want to update your profile? Tell me your current stats."
         
-        Be direct and actionable.
+        Be direct and actionable. Don't ask for information they've already provided.
         """
         
         do {

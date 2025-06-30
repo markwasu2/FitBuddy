@@ -63,61 +63,22 @@ struct CardShadow: ViewModifier {
 struct FitBuddyApp: App {
     let persistenceController = PersistenceController.shared
     @StateObject private var profileManager = ProfileManager()
+    @StateObject private var geminiService = GeminiService()
+    @StateObject private var calendarManager = CalendarManager()
     @StateObject private var workoutPlanManager = WorkoutPlanManager()
-    @StateObject private var workoutJournal = WorkoutJournal()
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var notificationManager = NotificationManager()
-    @StateObject private var calendarManager = CalendarManager()
-    @StateObject private var geminiService = GeminiService()
     
     var body: some Scene {
         WindowGroup {
-            if profileManager.isOnboardingComplete {
-                MainTabView()
-                    .environmentObject(profileManager)
-                    .environmentObject(workoutPlanManager)
-                    .environmentObject(workoutJournal)
-                    .environmentObject(healthKitManager)
-                    .environmentObject(notificationManager)
-                    .environmentObject(calendarManager)
-                    .environmentObject(geminiService)
-                    .preferredColorScheme(.dark)
-                    .onAppear {
-                        configureGeminiService()
-                    }
-            } else {
-                OnboardingView()
-                    .environmentObject(profileManager)
-                    .environmentObject(workoutPlanManager)
-                    .environmentObject(workoutJournal)
-                    .environmentObject(healthKitManager)
-                    .environmentObject(notificationManager)
-                    .environmentObject(calendarManager)
-                    .environmentObject(geminiService)
-                    .preferredColorScheme(.dark)
-                    .onAppear {
-                        configureGeminiService()
-                    }
-            }
-        }
-    }
-    
-    private func configureGeminiService() {
-        geminiService.configure(
-            profileManager: profileManager,
-            calendarManager: calendarManager,
-            workoutPlanManager: workoutPlanManager
-        )
-        
-        // Set up helper closures
-        geminiService.scheduleWorkout = { date, time, title in
-            // Schedule workout in calendar
-            calendarManager.addEvent(title: title, date: date, time: time)
-        }
-        
-        geminiService.updateProfile = { text in
-            // Update profile from chat
-            profileManager.updateProfile(text)
+            MainTabView()
+                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(profileManager)
+                .environmentObject(geminiService)
+                .environmentObject(calendarManager)
+                .environmentObject(workoutPlanManager)
+                .environmentObject(healthKitManager)
+                .environmentObject(notificationManager)
         }
     }
 }
@@ -139,6 +100,35 @@ struct RootView: View {
             MainTabView()
         } else {
             OnboardingView()
+                .environmentObject(profileManager)
+                .environmentObject(workoutPlanManager)
+                .environmentObject(healthKitManager)
+                .environmentObject(notificationManager)
+                .environmentObject(calendarManager)
+                .environmentObject(geminiService)
+                .preferredColorScheme(.dark)
+                .onAppear {
+                    configureGeminiService()
+                }
+        }
+    }
+    
+    private func configureGeminiService() {
+        geminiService.configure(
+            profileManager: profileManager,
+            calendarManager: calendarManager,
+            workoutPlanManager: workoutPlanManager
+        )
+        
+        // Set up helper closures
+        geminiService.scheduleWorkout = { date, time, title in
+            // Schedule workout in calendar
+            calendarManager.addEvent(title: title, date: date, time: time)
+        }
+        
+        geminiService.updateProfile = { text in
+            // Update profile from chat
+            profileManager.updateProfile(text)
         }
     }
 }
@@ -665,223 +655,373 @@ struct GoalButton: View {
     }
 }
 
-// MARK: - Tab Container
+// MARK: - Main Navigation Container
 struct MainTabView: View {
-    @EnvironmentObject var profileManager: ProfileManager
-    @EnvironmentObject var workoutJournal: WorkoutJournal
-    @EnvironmentObject var calendarManager: CalendarManager
-    @EnvironmentObject var healthKitManager: HealthKitManager
-    @EnvironmentObject var notificationManager: NotificationManager
-    @EnvironmentObject var geminiService: GeminiService
+    @State private var selectedTab = 0
     
     var body: some View {
-        TabView {
-            HomeScreen()
-                .tabItem { 
-                    Image(systemName: "house.fill")
-                    Text("Home")
-                }
-            PlanScreen()
-                .tabItem { 
-                    Image(systemName: "calendar")
-                    Text("Plan")
-                }
-            CoachScreen()
+        TabView(selection: $selectedTab) {
+            DashboardView()
                 .tabItem {
-                    Image(systemName: "message.and.waveform.fill")
-                    Text("Coach")
+                    Image(systemName: "house.fill")
+                    Text("Dashboard")
                 }
-            ProfileScreen()
+                .tag(0)
+            
+            ActivitiesView()
+                .tabItem {
+                    Image(systemName: "figure.run")
+                    Text("Activities")
+                }
+                .tag(1)
+            
+            CalendarView()
+                .tabItem {
+                    Image(systemName: "calendar")
+                    Text("Calendar")
+                }
+                .tag(2)
+            
+            AICoachView()
+                .tabItem {
+                    Image(systemName: "brain.head.profile")
+                    Text("AI Coach")
+                }
+                .tag(3)
+            
+            ProfileView()
                 .tabItem {
                     Image(systemName: "person.fill")
                     Text("Profile")
                 }
+                .tag(4)
         }
         .accentColor(Color(hex: "#7C3AED"))
-        .onAppear {
-            // Configure tab bar appearance
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(Color(hex: "#1C1C2E"))
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(Color(hex: "#7C3AED"))
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#7C3AED"))]
-            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(Color(hex: "#9CA3AF"))
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(Color(hex: "#9CA3AF"))]
-            
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
+        .preferredColorScheme(.dark)
     }
 }
 
-// MARK: - Home Screen
-struct HomeScreen: View {
+// MARK: - Dashboard View
+struct DashboardView: View {
     @EnvironmentObject var profileManager: ProfileManager
-    @State private var showingEditProfile = false
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @EnvironmentObject var healthKitManager: HealthKitManager
+    @State private var showingQuickActions = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
                     // Header
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Welcome Back,")
-                                .font(.subheadline)
-                                .foregroundColor(Color(hex: "#9CA3AF"))
-                            Text(profileManager.name)
-                                .font(.title)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                        }
-                        Spacer()
-                        Button(action: { showingEditProfile = true }) {
-                            Circle()
-                                .fill(Color(hex: "#7C3AED"))
-                                .frame(width: 40, height: 40)
-                                .overlay(
-                                    Text(String(profileManager.name.prefix(1)).uppercased())
-                                        .font(.headline)
-                                        .fontWeight(.bold)
-                                        .foregroundColor(.white)
-                                )
-                        }
-                    }
-                    .padding(.horizontal)
+                    headerSection
                     
-                    // Today's Plan Card
-                    VStack(spacing: 16) {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Today's Plan")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(hex: "#C4B5FD"))
-                                Text("Full Body Strength")
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                                Text("60 min • High Intensity")
-                                    .font(.subheadline)
-                                    .foregroundColor(Color(hex: "#C4B5FD"))
-                            }
-                            Spacer()
-                            Circle()
-                                .fill(Color.white.opacity(0.2))
-                                .frame(width: 40, height: 40)
-                                .overlay(
-                                    Image(systemName: "arrow.right")
-                                        .foregroundColor(.white)
-                                )
-                        }
-                        
-                        Button(action: {}) {
-                            Text("Start Workout")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                                .foregroundColor(Color(hex: "#7C3AED"))
-                                .frame(maxWidth: .infinity)
-                                .padding()
-                                .background(Color.white)
-                                .cornerRadius(12)
-                        }
-                    }
-                    .padding(20)
-                    .background(
-                        LinearGradient(
-                            colors: [Color(hex: "#7C3AED"), Color(hex: "#4F46E5")],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .cornerRadius(16)
-                    .padding(.horizontal)
+                    // Quick Actions
+                    quickActionsSection
                     
-                    // Biometrics Section
-                    VStack(alignment: .leading, spacing: 16) {
-                        Text("Biometrics")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal)
-                        
-                        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: 2), spacing: 16) {
-                            BiometricCard(
-                                icon: "heart.fill",
-                                iconColor: Color(hex: "#F87171"),
-                                title: "Heart Rate",
-                                value: "72",
-                                unit: "bpm"
-                            )
-                            
-                            BiometricCard(
-                                icon: "figure.walk",
-                                iconColor: Color(hex: "#60A5FA"),
-                                title: "Steps",
-                                value: "4,521",
-                                unit: nil
-                            )
-                            
-                            BiometricCard(
-                                icon: "bed.double.fill",
-                                iconColor: Color(hex: "#34D399"),
-                                title: "Sleep",
-                                value: "7h 45m",
-                                unit: nil
-                            )
-                            
-                            BiometricCard(
-                                icon: "flame.fill",
-                                iconColor: Color(hex: "#FB923C"),
-                                title: "Calories",
-                                value: "1,204",
-                                unit: "kcal"
-                            )
-                        }
-                        .padding(.horizontal)
-                    }
+                    // Current Activity
+                    currentActivitySection
+                    
+                    // Biometrics
+                    biometricsSection
+                    
+                    // Activity Journal
+                    activityJournalSection
                 }
-                .padding(.vertical)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100) // Extra padding for tab bar
             }
             .background(Color(hex: "#0D0D1A"))
             .navigationBarHidden(true)
         }
-        .sheet(isPresented: $showingEditProfile) {
-            EditProfileView()
+    }
+    
+    private var headerSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Welcome back,")
+                        .font(.title2)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                    
+                    Text(profileManager.name)
+                        .font(.largeTitle)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                }
+                
+                Spacer()
+                
+                Button(action: { showingQuickActions = true }) {
+                    ZStack {
+                        Circle()
+                            .fill(Color(hex: "#7C3AED"))
+                            .frame(width: 50, height: 50)
+                        
+                        Image(systemName: "plus")
+                            .foregroundColor(.white)
+                            .font(.system(size: 20, weight: .medium))
+                    }
+                }
+            }
+            
+            Text("Ready to crush your fitness goals today?")
+                .font(.subheadline)
+                .foregroundColor(Color(hex: "#9CA3AF"))
         }
+    }
+    
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Quick Actions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                QuickActionCard(
+                    title: "Start Workout",
+                    subtitle: "Begin your session",
+                    icon: "play.fill",
+                    color: Color(hex: "#7C3AED")
+                ) {
+                    // TODO: Start workout action
+                }
+                
+                QuickActionCard(
+                    title: "Log Activity",
+                    subtitle: "Record your progress",
+                    icon: "plus.circle.fill",
+                    color: Color(hex: "#10B981")
+                ) {
+                    // TODO: Log activity action
+                }
+                
+                QuickActionCard(
+                    title: "View Plan",
+                    subtitle: "Check your schedule",
+                    icon: "calendar.badge.clock",
+                    color: Color(hex: "#F59E0B")
+                ) {
+                    // TODO: View plan action
+                }
+                
+                QuickActionCard(
+                    title: "AI Coach",
+                    subtitle: "Get personalized advice",
+                    icon: "brain.head.profile",
+                    color: Color(hex: "#EF4444")
+                ) {
+                    // TODO: AI coach action
+                }
+            }
+        }
+    }
+    
+    private var currentActivitySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Current Activity")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Today's Goal")
+                            .font(.subheadline)
+                            .foregroundColor(Color(hex: "#9CA3AF"))
+                        
+                        Text("45 minutes")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                    }
+                    
+                    Spacer()
+                    
+                    CircularProgressView(progress: 0.7, size: 60)
+                }
+                
+                HStack(spacing: 16) {
+                    StatCard(title: "Steps", value: "8,432", subtitle: "Goal: 10,000")
+                    StatCard(title: "Calories", value: "1,247", subtitle: "Goal: 2,000")
+                }
+            }
+            .padding(20)
+            .background(Color(hex: "#1C1C2E"))
+            .cornerRadius(16)
+        }
+    }
+    
+    private var biometricsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Biometrics")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                BiometricCard(
+                    title: "Heart Rate",
+                    value: "72",
+                    unit: "BPM",
+                    icon: "heart.fill",
+                    color: Color(hex: "#EF4444")
+                )
+                
+                BiometricCard(
+                    title: "Sleep",
+                    value: "7.5",
+                    unit: "hrs",
+                    icon: "bed.double.fill",
+                    color: Color(hex: "#8B5CF6")
+                )
+                
+                BiometricCard(
+                    title: "Weight",
+                    value: "165",
+                    unit: "lbs",
+                    icon: "scalemass.fill",
+                    color: Color(hex: "#10B981")
+                )
+                
+                BiometricCard(
+                    title: "Body Fat",
+                    value: "18",
+                    unit: "%",
+                    icon: "chart.pie.fill",
+                    color: Color(hex: "#F59E0B")
+                )
+            }
+        }
+    }
+    
+    private var activityJournalSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Recent Activities")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button("View All") {
+                    // TODO: Navigate to activities
+                }
+                .font(.subheadline)
+                .foregroundColor(Color(hex: "#7C3AED"))
+            }
+            
+            VStack(spacing: 12) {
+                ForEach(sampleActivities.prefix(3), id: \.id) { activity in
+                    ActivityJournalCard(activity: activity)
+                }
+            }
+        }
+    }
+    
+    private var sampleActivities: [WorkoutEntry] {
+        [
+            WorkoutEntry(
+                date: Date(),
+                exercises: [],
+                type: "Strength Training",
+                duration: 45,
+                mood: "Great",
+                difficulty: "Medium",
+                calories: 320
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(-86400),
+                exercises: [],
+                type: "Cardio",
+                duration: 30,
+                mood: "Good",
+                difficulty: "Easy",
+                calories: 280
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(-172800),
+                exercises: [],
+                type: "Yoga",
+                duration: 60,
+                mood: "Excellent",
+                difficulty: "Easy",
+                calories: 180
+            )
+        ]
     }
 }
 
-struct BiometricCard: View {
-    let icon: String
-    let iconColor: Color
+// MARK: - Quick Action Card
+struct QuickActionCard: View {
     let title: String
-    let value: String
-    let unit: String?
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(iconColor)
-                    .font(.title3)
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                    .foregroundColor(Color(hex: "#D1D5DB"))
-            }
-            
-            HStack(alignment: .bottom, spacing: 4) {
-                Text(value)
-                    .font(.title)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.title2)
+                        .foregroundColor(color)
+                    Spacer()
+                }
                 
-                if let unit = unit {
-                    Text(unit)
-                        .font(.subheadline)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Text(subtitle)
+                        .font(.caption)
                         .foregroundColor(Color(hex: "#9CA3AF"))
                 }
             }
+            .padding(16)
+            .background(Color(hex: "#1C1C2E"))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Activity Journal Card
+struct ActivityJournalCard: View {
+    let activity: WorkoutEntry
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Circle()
+                .fill(Color(hex: "#7C3AED"))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: "dumbbell.fill")
+                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .medium))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(activity.type)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Text("\(activity.duration) min • \(activity.exercises.count) exercises")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            
+            Spacer()
+            
+            Text(activity.date, style: .date)
+                .font(.caption)
+                .foregroundColor(Color(hex: "#9CA3AF"))
         }
         .padding(16)
         .background(Color(hex: "#1C1C2E"))
@@ -1012,271 +1152,959 @@ struct WorkoutCard: View {
     }
 }
 
-// MARK: - Coach Screen
-struct CoachScreen: View {
+// MARK: - AI Coach View
+struct AICoachView: View {
     @EnvironmentObject var geminiService: GeminiService
+    @EnvironmentObject var profileManager: ProfileManager
     @State private var messageText = ""
+    @State private var showingProfile = false
     
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Chat messages with ScrollViewReader for auto-scrolling
+                // Chat messages
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            ForEach(geminiService.messages) { message in
-                                ChatBubble(message: message)
-                                    .id(message.id)
+                            ForEach(geminiService.messages, id: \.id) { message in
+                                ModernChatBubble(message: message)
                             }
                         }
-                        .padding()
+                        .padding(.horizontal, 20)
+                        .padding(.top, 20)
+                        .padding(.bottom, 100) // Extra padding for input and tab bar
                     }
                     .onChange(of: geminiService.messages.count) { _ in
-                        if let last = geminiService.messages.last {
-                            withAnimation(.easeOut(duration: 0.3)) {
-                                proxy.scrollTo(last.id, anchor: .bottom)
-                            }
+                        withAnimation(.easeOut(duration: 0.3)) {
+                            proxy.scrollTo(geminiService.messages.last?.id, anchor: .bottom)
                         }
                     }
-                    .background(Color(hex: "#0D0D1A"))
                 }
-                
-                // Loading indicator
-                if geminiService.isProcessing {
-                    HStack {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                            .progressViewStyle(CircularProgressViewStyle(tint: Color(hex: "#7C3AED")))
-                        Text("Thinking...")
-                            .font(.subheadline)
-                            .foregroundColor(Color(hex: "#9CA3AF"))
-                    }
-                    .padding(.vertical, 8)
-                    .background(Color(hex: "#0D0D1A"))
-                }
-                
-                // Suggestion chips
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(["New workout plan", "How's my progress?", "Adjust my goals"], id: \.self) { suggestion in
-                            Button(action: {
-                                messageText = suggestion
-                            }) {
-                                Text(suggestion)
-                                    .font(.subheadline)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color(hex: "#1C1C2E"))
-                                    .cornerRadius(20)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-                .background(Color(hex: "#0D0D1A"))
                 
                 // Input area
-                HStack(spacing: 12) {
-                    TextField("Ask me anything...", text: $messageText)
-                        .textFieldStyle(PlainTextFieldStyle())
-                        .padding()
-                        .background(Color(hex: "#1C1C2E"))
-                        .cornerRadius(25)
-                        .foregroundColor(.white)
-                        .disabled(geminiService.isProcessing)
+                VStack(spacing: 0) {
+                    Divider()
+                        .background(Color(hex: "#374151"))
                     
-                    Button(action: {
-                        if !messageText.isEmpty && !geminiService.isProcessing {
-                            Task {
-                                await geminiService.sendMessage(messageText)
-                                await MainActor.run {
-                                    messageText = ""
-                                }
-                            }
+                    HStack(spacing: 12) {
+                        TextField("Ask your AI coach...", text: $messageText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .background(Color(hex: "#1C1C2E"))
+                            .cornerRadius(24)
+                            .foregroundColor(.white)
+                        
+                        Button(action: sendMessage) {
+                            Image(systemName: "arrow.up.circle.fill")
+                                .font(.system(size: 32))
+                                .foregroundColor(messageText.isEmpty ? Color(hex: "#6B7280") : Color(hex: "#7C3AED"))
                         }
-                    }) {
-                        Image(systemName: geminiService.isProcessing ? "clock" : "arrow.up.circle.fill")
-                            .font(.title2)
-                            .foregroundColor(geminiService.isProcessing ? Color(hex: "#6B7280") : Color(hex: "#7C3AED"))
+                        .disabled(messageText.isEmpty)
                     }
-                    .disabled(geminiService.isProcessing)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 16)
+                    .background(Color(hex: "#0D0D1A"))
                 }
-                .padding()
-                .background(Color(hex: "#0D0D1A"))
             }
+            .background(Color(hex: "#0D0D1A"))
             .navigationTitle("AI Coach")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
-        }
-    }
-}
-
-struct ChatBubble: View {
-    let message: ChatMessage
-    
-    var body: some View {
-        HStack {
-            if message.isFromUser {
-                Spacer()
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(message.content)
-                        .padding()
-                        .background(Color(hex: "#7C3AED"))
-                        .foregroundColor(.white)
-                        .cornerRadius(16, corners: [.topLeft, .topRight, .bottomLeft])
-                }
-            } else {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [Color(hex: "#7C3AED"), Color(hex: "#4F46E5")],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .frame(width: 32, height: 32)
-                            .overlay(
-                                Text("AI")
-                                    .font(.caption)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            )
-                        
-                        Text(message.content)
-                            .padding()
-                            .background(Color(hex: "#1C1C2E"))
-                            .foregroundColor(.white)
-                            .cornerRadius(16, corners: [.topLeft, .topRight, .bottomRight])
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingProfile = true }) {
+                        Image(systemName: "person.circle")
+                            .foregroundColor(Color(hex: "#7C3AED"))
                     }
                 }
-                Spacer()
+            }
+        }
+        .sheet(isPresented: $showingProfile) {
+            ProfileEditSheet()
+        }
+        .onAppear {
+            if geminiService.messages.isEmpty {
+                // Send welcome message
+                let welcomeMessage = ChatMessage(
+                    content: "Hi! I'm your FitBuddy AI coach. I'm here to help you with personalized workout plans, nutrition advice, and fitness guidance. What would you like to work on today?",
+                    isFromUser: false,
+                    timestamp: Date()
+                )
+                geminiService.messages.append(welcomeMessage)
             }
         }
     }
+    
+    private func sendMessage() {
+        guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        
+        let userMessage = ChatMessage(
+            content: messageText,
+            isFromUser: true,
+            timestamp: Date()
+        )
+        
+        geminiService.messages.append(userMessage)
+        let messageToSend = messageText
+        messageText = ""
+        
+        Task {
+            await geminiService.sendMessage(messageToSend)
+        }
+    }
 }
 
-// MARK: - Profile Screen
-struct ProfileScreen: View {
+
+// MARK: - Profile View
+struct ProfileView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
     @State private var showingEditProfile = false
+    @State private var showingSettings = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
-                    // User info
-                    HStack(spacing: 16) {
-                        Circle()
-                            .fill(Color(hex: "#7C3AED"))
-                            .frame(width: 80, height: 80)
-                            .overlay(
-                                Text(String(profileManager.name.prefix(1)).uppercased())
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            )
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(profileManager.name)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.white)
-                            Text("Joined May 2024")
-                                .font(.subheadline)
-                                .foregroundColor(Color(hex: "#9CA3AF"))
-                        }
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal)
+                    // Profile Header
+                    profileHeaderSection
                     
-                    // Settings list
-                    VStack(spacing: 8) {
-                        SettingsRow(
-                            icon: "target",
-                            iconColor: Color(hex: "#7C3AED"),
-                            title: "My Goals"
-                        )
-                        
-                        SettingsRow(
-                            icon: "link",
-                            iconColor: Color(hex: "#60A5FA"),
-                            title: "Connected Devices"
-                        )
-                        
-                        SettingsRow(
-                            icon: "bell",
-                            iconColor: Color(hex: "#34D399"),
-                            title: "Notifications"
-                        )
-                        
-                        SettingsRow(
-                            icon: "person.crop.circle.badge.plus",
-                            iconColor: Color(hex: "#F87171"),
-                            title: "Account & Security"
-                        )
-                    }
-                    .padding(.horizontal)
+                    // Stats Overview
+                    statsOverviewSection
+                    
+                    // Quick Actions
+                    quickActionsSection
+                    
+                    // Settings
+                    settingsSection
                 }
-                .padding(.vertical)
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100) // Extra padding for tab bar
             }
             .background(Color(hex: "#0D0D1A"))
-            .navigationTitle("Profile & Settings")
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingEditProfile = true }) {
+                        Image(systemName: "pencil")
+                            .foregroundColor(Color(hex: "#7C3AED"))
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showingEditProfile) {
+            ProfileEditSheet()
+        }
+    }
+    
+    private var profileHeaderSection: some View {
+        VStack(spacing: 16) {
+            // Profile Image
+            ZStack {
+                Circle()
+                    .fill(Color(hex: "#7C3AED"))
+                    .frame(width: 100, height: 100)
+                
+                Text(String((profileManager.name.prefix(1)).uppercased()))
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(.white)
+            }
+            
+            // Name and Info
+            VStack(spacing: 8) {
+                Text(profileManager.name)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("user@example.com")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                HStack(spacing: 16) {
+                    ProfileInfoItem(title: "Age", value: "\(profileManager.age)")
+                    ProfileInfoItem(title: "Height", value: "\(profileManager.height) cm")
+                    ProfileInfoItem(title: "Weight", value: "\(profileManager.weight) kg")
+                }
+            }
+        }
+        .padding(24)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(16)
+    }
+    
+    private var statsOverviewSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Your Stats")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                ProfileStatCard(
+                    title: "Total Workouts",
+                    value: "\(workoutPlanManager.plans.count)",
+                    icon: "dumbbell.fill",
+                    color: Color(hex: "#7C3AED")
+                )
+                
+                ProfileStatCard(
+                    title: "Current Streak",
+                    value: "7 days",
+                    icon: "flame.fill",
+                    color: Color(hex: "#EF4444")
+                )
+                
+                ProfileStatCard(
+                    title: "Total Calories",
+                    value: "12,450",
+                    icon: "flame.fill",
+                    color: Color(hex: "#F59E0B")
+                )
+                
+                ProfileStatCard(
+                    title: "Workout Hours",
+                    value: "24.5",
+                    icon: "clock.fill",
+                    color: Color(hex: "#10B981")
+                )
+            }
+        }
+    }
+    
+    private var quickActionsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Quick Actions")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 12) {
+                ProfileActionRow(
+                    title: "Edit Profile",
+                    subtitle: "Update your information",
+                    icon: "person.circle.fill",
+                    color: Color(hex: "#7C3AED")
+                ) {
+                    showingEditProfile = true
+                }
+                
+                ProfileActionRow(
+                    title: "Workout History",
+                    subtitle: "View your past workouts",
+                    icon: "chart.bar.fill",
+                    color: Color(hex: "#10B981")
+                ) {
+                    // TODO: Navigate to workout history
+                }
+                
+                ProfileActionRow(
+                    title: "Goals & Progress",
+                    subtitle: "Track your fitness goals",
+                    icon: "target",
+                    color: Color(hex: "#F59E0B")
+                ) {
+                    // TODO: Navigate to goals
+                }
+            }
+        }
+    }
+    
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Settings")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 12) {
+                ProfileActionRow(
+                    title: "Notifications",
+                    subtitle: "Manage your alerts",
+                    icon: "bell.fill",
+                    color: Color(hex: "#EF4444")
+                ) {
+                    // TODO: Navigate to notifications
+                }
+                
+                ProfileActionRow(
+                    title: "Privacy",
+                    subtitle: "Control your data",
+                    icon: "lock.fill",
+                    color: Color(hex: "#8B5CF6")
+                ) {
+                    // TODO: Navigate to privacy
+                }
+                
+                ProfileActionRow(
+                    title: "Help & Support",
+                    subtitle: "Get assistance",
+                    icon: "questionmark.circle.fill",
+                    color: Color(hex: "#6B7280")
+                ) {
+                    // TODO: Navigate to help
+                }
+            }
         }
     }
 }
 
-struct SettingsRow: View {
-    let icon: String
-    let iconColor: Color
+struct ProfileInfoItem: View {
     let title: String
+    let value: String
     
     var body: some View {
-        HStack(spacing: 16) {
-            Image(systemName: icon)
-                .foregroundColor(iconColor)
-                .font(.title3)
-                .frame(width: 24)
-            
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
+                .font(.subheadline)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            
+            Text(value)
                 .font(.body)
                 .foregroundColor(.white)
-            
-            Spacer()
-            
-            Image(systemName: "chevron.right")
-                .foregroundColor(Color(hex: "#6B7280"))
-                .font(.caption)
         }
-        .padding()
+    }
+}
+
+struct ProfileStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            
+            Text(value)
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+        .padding(16)
         .background(Color(hex: "#1C1C2E"))
         .cornerRadius(12)
     }
 }
 
-// MARK: - Extensions
-extension View {
-    func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
-        clipShape(RoundedCorner(radius: radius, corners: corners))
+struct ProfileActionRow: View {
+    let title: String
+    let subtitle: String
+    let icon: String
+    let color: Color
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 16) {
+                Image(systemName: icon)
+                    .foregroundColor(color)
+                    .font(.title3)
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                }
+                
+                Spacer()
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .padding(16)
+            .background(Color(hex: "#1C1C2E"))
+            .cornerRadius(12)
+        }
+        .buttonStyle(PlainButtonStyle())
     }
 }
 
-struct RoundedCorner: Shape {
-    var radius: CGFloat = .infinity
-    var corners: UIRectCorner = .allCorners
-
-    func path(in rect: CGRect) -> Path {
-        let path = UIBezierPath(
-            roundedRect: rect,
-            byRoundingCorners: corners,
-            cornerRadii: CGSize(width: radius, height: radius)
-        )
-        return Path(path.cgPath)
+// MARK: - Calendar View
+struct CalendarView: View {
+    @EnvironmentObject var calendarManager: CalendarManager
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @State private var selectedDate = Date()
+    @State private var showingAddWorkout = false
+    
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Calendar Grid
+                    calendarGridSection
+                    
+                    // Selected Date Workouts
+                    selectedDateWorkoutsSection
+                    
+                    // Weekly Summary
+                    weeklySummarySection
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100) // Extra padding for tab bar
+            }
+            .background(Color(hex: "#0D0D1A"))
+            .navigationTitle("Calendar")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddWorkout = true }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(Color(hex: "#7C3AED"))
+                    }
+                }
+            }
+        }
+    }
+    
+    private var calendarGridSection: some View {
+        VStack(spacing: 16) {
+            // Month header
+            HStack {
+                Button(action: { moveMonth(-1) }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundColor(Color(hex: "#7C3AED"))
+                }
+                
+                Spacer()
+                
+                Text(monthYearString)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Spacer()
+                
+                Button(action: { moveMonth(1) }) {
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(Color(hex: "#7C3AED"))
+                }
+            }
+            
+            // Day headers
+            HStack(spacing: 0) {
+                ForEach(["S", "M", "T", "W", "T", "F", "S"], id: \.self) { day in
+                    Text(day)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            
+            // Calendar grid
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: 8) {
+                ForEach(calendarDays, id: \.self) { date in
+                    CalendarDayView(
+                        date: date,
+                        isSelected: Calendar.current.isDate(date, inSameDayAs: selectedDate),
+                        hasWorkout: hasWorkoutOnDate(date)
+                    ) {
+                        selectedDate = date
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(16)
+    }
+    
+    private var selectedDateWorkoutsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text(selectedDateString)
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            if workoutsForSelectedDate.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "calendar.badge.plus")
+                        .font(.system(size: 40))
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                    
+                    Text("No workouts scheduled")
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                    
+                    Button("Add Workout") {
+                        showingAddWorkout = true
+                    }
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#7C3AED"))
+                }
+                .frame(maxWidth: .infinity)
+                .padding(40)
+                .background(Color(hex: "#1C1C2E"))
+                .cornerRadius(12)
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(workoutsForSelectedDate, id: \.id) { workout in
+                        ScheduledWorkoutCard(workout: workout)
+                    }
+                }
+            }
+        }
+    }
+    
+    private var weeklySummarySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("This Week")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            HStack(spacing: 16) {
+                WeeklyStatCard(title: "Workouts", value: "5", icon: "dumbbell.fill")
+                WeeklyStatCard(title: "Hours", value: "4.5", icon: "clock.fill")
+                WeeklyStatCard(title: "Calories", value: "2,100", icon: "flame.fill")
+            }
+        }
+    }
+    
+    // MARK: - Helper Methods
+    
+    private var monthYearString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMMM yyyy"
+        return formatter.string(from: selectedDate)
+    }
+    
+    private var selectedDateString: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, MMMM d"
+        return formatter.string(from: selectedDate)
+    }
+    
+    private var calendarDays: [Date] {
+        // Generate calendar days for current month
+        let calendar = Calendar.current
+        let startOfMonth = calendar.dateInterval(of: .month, for: selectedDate)?.start ?? selectedDate
+        let firstWeekday = calendar.component(.weekday, from: startOfMonth)
+        let daysInMonth = calendar.range(of: .day, in: .month, for: selectedDate)?.count ?? 30
+        
+        var days: [Date] = []
+        
+        // Add previous month days
+        let previousMonthDays = firstWeekday - 1
+        for i in (1...previousMonthDays).reversed() {
+            if let date = calendar.date(byAdding: .day, value: -i, to: startOfMonth) {
+                days.append(date)
+            }
+        }
+        
+        // Add current month days
+        for day in 1...daysInMonth {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: startOfMonth) {
+                days.append(date)
+            }
+        }
+        
+        // Add next month days to fill the grid
+        let remainingDays = 42 - days.count // 6 rows * 7 days
+        for day in 1...remainingDays {
+            if let date = calendar.date(byAdding: .day, value: day, to: days.last ?? startOfMonth) {
+                days.append(date)
+            }
+        }
+        
+        return days
+    }
+    
+    private func hasWorkoutOnDate(_ date: Date) -> Bool {
+        // Check if there's a workout scheduled for this date
+        return workoutsForSelectedDate.contains { workout in
+            Calendar.current.isDate(workout.date, inSameDayAs: date)
+        }
+    }
+    
+    private var workoutsForSelectedDate: [WorkoutEntry] {
+        return sampleWorkouts.filter { workout in
+            Calendar.current.isDate(workout.date, inSameDayAs: selectedDate)
+        }
+    }
+    
+    private func moveMonth(_ direction: Int) {
+        if let newDate = Calendar.current.date(byAdding: .month, value: direction, to: selectedDate) {
+            selectedDate = newDate
+        }
+    }
+    
+    private var sampleWorkouts: [WorkoutEntry] {
+        [
+            WorkoutEntry(
+                date: Date(),
+                exercises: [],
+                type: "Strength Training",
+                duration: 45,
+                mood: "Great",
+                difficulty: "Medium",
+                calories: 320
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(86400),
+                exercises: [],
+                type: "Cardio",
+                duration: 30,
+                mood: "Good",
+                difficulty: "Easy",
+                calories: 280
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(172800),
+                exercises: [],
+                type: "Yoga",
+                duration: 60,
+                mood: "Excellent",
+                difficulty: "Easy",
+                calories: 180
+            )
+        ]
     }
 }
+
+// MARK: - Calendar Day View
+struct CalendarDayView: View {
+    let date: Date
+    let isSelected: Bool
+    let hasWorkout: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Text("\(Calendar.current.component(.day, from: date))")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundColor(isSelected ? .white : (hasWorkout ? .white : Color(hex: "#6B7280")))
+                
+                if hasWorkout {
+                    Circle()
+                        .fill(Color(hex: "#7C3AED"))
+                        .frame(width: 4, height: 4)
+                } else {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .frame(width: 40, height: 40)
+            .background(
+                Circle()
+                    .fill(isSelected ? Color(hex: "#7C3AED") : Color.clear)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Weekly Stat Card
+struct WeeklyStatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(Color(hex: "#7C3AED"))
+            
+            Text(title)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            
+            Text(value)
+                .font(.title)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Scheduled Workout Card
+struct ScheduledWorkoutCard: View {
+    let workout: WorkoutEntry
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Circle()
+                .fill(Color(hex: "#7C3AED"))
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: "dumbbell.fill")
+                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .medium))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(workout.type)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                Text("\(workout.duration) min")
+                    .font(.subheadline)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            
+            Spacer()
+            
+            Text(workout.date, style: .date)
+                .font(.caption)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Placeholder Views
+struct ActivityLogView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Activity Log")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("Coming soon...")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+struct WorkoutLogView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Workout Log")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("Coming soon...")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+struct NotificationsView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Notifications")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("No new notifications")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+struct AddWorkoutView: View {
+    let selectedDate: Date
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Add Workout")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("Coming soon...")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+struct WorkoutDetailView: View {
+    let workout: ScheduledWorkout
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Workout Details")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text(workout.workoutPlan.title)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+// MARK: - Helper Components
+
+struct CircularProgressView: View {
+    let progress: Double
+    let size: CGFloat
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(Color(hex: "#374151"), lineWidth: 4)
+                .frame(width: size, height: size)
+            
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(Color(hex: "#7C3AED"), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut(duration: 0.5), value: progress)
+        }
+    }
+}
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    let subtitle: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.caption)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+            
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(8)
+    }
+}
+
+struct SummaryCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: icon)
+                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .font(.title3)
+                
+                Spacer()
+            }
+            
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(Color(hex: "#9CA3AF"))
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Biometric Card (Stub)
+struct BiometricCard: View {
+    let title: String
+    let value: String
+    let unit: String
+    let icon: String
+    let color: Color
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.white)
+            Text("\(value) \(unit)")
+                .font(.headline)
+                .foregroundColor(.white)
+        }
+        .padding()
+        .background(color.opacity(0.2))
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Activities View (Stub)
+struct ActivitiesView: View {
+    var body: some View {
+        VStack {
+            Spacer()
+            Text("Activities coming soon...")
+                .foregroundColor(.gray)
+                .font(.title2)
+            Spacer()
+        }
+        .background(Color(hex: "#0D0D1A").ignoresSafeArea())
+    }
+}
+
