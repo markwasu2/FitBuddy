@@ -25,9 +25,9 @@ struct ModernChatBubble: View {
             .foregroundColor(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color(red: 59/255, green: 130/255, blue: 246/255)) // Bright blue
+            .background(Color(hex: "#7C3AED")) // Purple to match app theme
             .cornerRadius(20)
-            .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
     }
     
     private var botBubble: some View {
@@ -39,7 +39,7 @@ struct ModernChatBubble: View {
             } else {
                 Text(message.content)
                     .font(.body)
-                    .foregroundColor(Color(red: 31/255, green: 41/255, blue: 55/255)) // Dark gray for better contrast
+                    .foregroundColor(.white) // White text for good contrast on dark background
                     .multilineTextAlignment(.leading)
             }
             
@@ -50,9 +50,9 @@ struct ModernChatBubble: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(red: 249/255, green: 250/255, blue: 251/255)) // Light gray background
+        .background(Color(hex: "#1C1C2E")) // Dark background to match app theme
         .cornerRadius(20)
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
     }
     
     private var richTextContent: some View {
@@ -64,17 +64,17 @@ struct ModernChatBubble: View {
                     // Bold text (headers)
                     Text(line.replacingOccurrences(of: "**", with: ""))
                         .font(.headline)
-                        .foregroundColor(Color(red: 17/255, green: 24/255, blue: 39/255)) // Very dark for headers
+                        .foregroundColor(Color(hex: "#7C3AED")) // Purple for headers
                         .fontWeight(.semibold)
                 } else if line.contains("•") {
                     // Bullet points
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundColor(Color(red: 59/255, green: 130/255, blue: 246/255)) // Blue bullet
+                            .foregroundColor(Color(hex: "#7C3AED")) // Purple bullet
                             .font(.body)
                         Text(line.replacingOccurrences(of: "• ", with: ""))
                             .font(.body)
-                            .foregroundColor(Color(red: 31/255, green: 41/255, blue: 55/255)) // Dark gray text
+                            .foregroundColor(.white) // White text
                     }
                 } else if line.contains("✅") || line.contains("📝") || line.contains("❌") {
                     // Action items
@@ -87,9 +87,9 @@ struct ModernChatBubble: View {
                     }
                 } else if !line.trimmingCharacters(in: .whitespaces).isEmpty {
                     // Regular text
-                    Text(line)
-                        .font(.body)
-                        .foregroundColor(Color(red: 31/255, green: 41/255, blue: 55/255)) // Dark gray text
+                                            Text(line)
+                            .font(.body)
+                            .foregroundColor(.white) // White text
                 }
             }
         }
