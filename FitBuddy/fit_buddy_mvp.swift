@@ -21,12 +21,34 @@ import CoreData
 
 // MARK: - Modern Design System
 extension Color {
-    static let bgPrimary = Color.white
-    static let bgSecondary = Color(red: 248/255, green: 248/255, blue: 250/255)
-    static let textPrimary = Color.black
-    static let textSecondary = Color(red: 142/255, green: 142/255, blue: 147/255)
-    static let accentBlue = Color(red: 10/255, green: 132/255, blue: 255/255)
-    static let cardShadow = Color.black.opacity(0.05)
+    // Primary accent - Soft Coral
+    static let primaryCoral = Color(hex: "#FF6B6B")
+    
+    // Secondary accent - Warm Peach
+    static let secondaryPeach = Color(hex: "#FFA58F")
+    
+    // Highlight - Apricot
+    static let highlightApricot = Color(hex: "#FFB07C")
+    
+    // Call-to-action / KPI chips - Honey Yellow
+    static let ctaYellow = Color(hex: "#FFC65C")
+    
+    // Sub-accent / error - Muted Terracotta
+    static let mutedTerracotta = Color(hex: "#E07A5F")
+    
+    // Light surface - Off-White
+    static let offWhite = Color(hex: "#FDFCFB")
+    
+    // Dark text / backgrounds - Charcoal
+    static let charcoal = Color(hex: "#333333")
+    
+    // Background colors
+    static let bgPrimary = Color.offWhite
+    static let bgSecondary = Color.white
+    static let textPrimary = Color.charcoal
+    static let textSecondary = Color(hex: "#666666")
+    static let accentBlue = Color.primaryCoral
+    static let cardShadow = Color.black.opacity(0.08)
     static let cardCorner: CGFloat = 16
 }
 
@@ -103,7 +125,7 @@ struct RootView: View {
             MainTabView()
         } else {
             OnboardingView()
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(.light)
                 .onAppear {
                     configureGeminiService()
                 }
@@ -132,10 +154,10 @@ struct RootView: View {
 
 // MARK: - Color Extensions
 extension Color {
-    static let cardBackground = Color(.systemBackground)
-    static let errorRed = Color.red
-    static let successGreen = Color.green
-    static let secondaryText = Color(.secondaryLabel)
+    static let cardBackground = Color.offWhite
+    static let errorRed = Color.mutedTerracotta
+    static let successGreen = Color(hex: "#4CAF50")
+    static let secondaryText = Color.textSecondary
 }
 
 // MARK: - Basic Models
@@ -695,8 +717,8 @@ struct MainTabView: View {
                 }
                 .tag(4)
         }
-        .accentColor(Color(hex: "#7C3AED"))
-        .preferredColorScheme(.dark)
+        .accentColor(Color.primaryCoral)
+        .preferredColorScheme(.light)
         .onAppear {
             // Ensure we start with a valid tab
             selectedTab = 0
@@ -745,7 +767,7 @@ struct DashboardView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Extra padding for tab bar
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarHidden(true)
         }
     }
@@ -756,12 +778,12 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Welcome back,")
                         .font(.title2)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                     
                     Text(profileManager.name)
                         .font(.largeTitle)
                         .fontWeight(.bold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.textPrimary)
                 }
                 
                 Spacer()
@@ -769,7 +791,7 @@ struct DashboardView: View {
                 Button(action: { showingQuickActions = true }) {
                     ZStack {
                         Circle()
-                            .fill(Color(hex: "#7C3AED"))
+                            .fill(Color.primaryCoral)
                             .frame(width: 50, height: 50)
                         
                         Image(systemName: "plus")
@@ -781,7 +803,7 @@ struct DashboardView: View {
             
             Text("Ready to crush your fitness goals today?")
                 .font(.subheadline)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
         }
     }
     
@@ -797,7 +819,7 @@ struct DashboardView: View {
                     title: "Start Workout",
                     subtitle: "Begin your session",
                     icon: "play.fill",
-                    color: Color(hex: "#7C3AED")
+                    color: Color.primaryCoral
                 ) {
                     // TODO: Start workout action
                 }
@@ -806,7 +828,7 @@ struct DashboardView: View {
                     title: "Log Activity",
                     subtitle: "Record your progress",
                     icon: "plus.circle.fill",
-                    color: Color(hex: "#10B981")
+                    color: Color.secondaryPeach
                 ) {
                     // TODO: Log activity action
                 }
@@ -815,7 +837,7 @@ struct DashboardView: View {
                     title: "View Plan",
                     subtitle: "Check your schedule",
                     icon: "calendar.badge.clock",
-                    color: Color(hex: "#F59E0B")
+                    color: Color.ctaYellow
                 ) {
                     // TODO: View plan action
                 }
@@ -824,7 +846,7 @@ struct DashboardView: View {
                     title: "AI Coach",
                     subtitle: "Get personalized advice",
                     icon: "brain.head.profile",
-                    color: Color(hex: "#EF4444")
+                    color: Color.highlightApricot
                 ) {
                     // TODO: AI coach action
                 }
@@ -993,15 +1015,15 @@ struct QuickActionCard: View {
                     Text(title)
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.textPrimary)
                     
                     Text(subtitle)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             .padding(16)
-            .background(Color(hex: "#1C1C2E"))
+            .background(Color.white)
             .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
@@ -1027,21 +1049,21 @@ struct ActivityJournalCard: View {
                 Text(activity.type)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("\(activity.duration) min • \(activity.exercises.count) exercises")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()
             
             Text(activity.date, style: .date)
                 .font(.caption)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
     }
 }
@@ -1201,43 +1223,43 @@ struct AICoachView: View {
                 // Input area
                 VStack(spacing: 0) {
                     Divider()
-                        .background(Color(hex: "#374151")) // Dark divider
+                        .background(Color(hex: "#E5E7EB")) // Light divider
                     
                     HStack(spacing: 12) {
                         TextField("Ask your AI coach...", text: $messageText)
                             .textFieldStyle(PlainTextFieldStyle())
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            .background(Color(hex: "#1C1C2E")) // Dark background
+                            .background(Color.white) // White background
                             .cornerRadius(24)
-                            .foregroundColor(.white) // White text
-                            .accentColor(Color(hex: "#7C3AED")) // Purple cursor
+                            .foregroundColor(Color.charcoal) // Charcoal text
+                            .accentColor(Color.primaryCoral) // Soft Coral cursor
                             .overlay(
                                 RoundedRectangle(cornerRadius: 24)
-                                    .stroke(Color(hex: "#374151"), lineWidth: 1) // Dark border
+                                    .stroke(Color(hex: "#E5E7EB"), lineWidth: 1) // Light border
                             )
                         
                         Button(action: sendMessage) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 32))
-                                .foregroundColor(messageText.isEmpty ? Color(hex: "#6B7280") : Color(hex: "#7C3AED")) // Gray when empty, purple when has text
+                                .foregroundColor(messageText.isEmpty ? Color(hex: "#9CA3AF") : Color.primaryCoral) // Gray when empty, coral when has text
                         }
                         .disabled(messageText.isEmpty)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .background(Color(hex: "#0F0F23")) // Dark background
+                    .background(Color.offWhite) // Off-white background
                 }
             }
-            .background(Color(hex: "#0D0D1A")) // Dark background
+            .background(Color.offWhite) // Off-white background
             .navigationTitle("AI Coach")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingProfile = true }) {
                         Image(systemName: "person.circle")
-                            .foregroundColor(Color(hex: "#7C3AED")) // Purple
+                            .foregroundColor(Color.primaryCoral) // Soft Coral
                     }
                 }
             }

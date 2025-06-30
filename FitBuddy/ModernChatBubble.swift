@@ -25,9 +25,9 @@ struct ModernChatBubble: View {
             .foregroundColor(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color(hex: "#7C3AED")) // Purple to match app theme
+            .background(Color.primaryCoral) // Soft Coral
             .cornerRadius(20)
-            .shadow(color: .black.opacity(0.2), radius: 4, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
     }
     
     private var botBubble: some View {
@@ -39,7 +39,7 @@ struct ModernChatBubble: View {
             } else {
                 Text(message.content)
                     .font(.body)
-                    .foregroundColor(.white) // White text for good contrast on dark background
+                    .foregroundColor(Color.charcoal) // Charcoal text for good contrast on light background
                     .multilineTextAlignment(.leading)
             }
             
@@ -50,9 +50,9 @@ struct ModernChatBubble: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(hex: "#1C1C2E")) // Dark background to match app theme
+        .background(Color.offWhite) // Off-white background
         .cornerRadius(20)
-        .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
     }
     
     private var richTextContent: some View {
@@ -64,17 +64,17 @@ struct ModernChatBubble: View {
                     // Bold text (headers)
                     Text(line.replacingOccurrences(of: "**", with: ""))
                         .font(.headline)
-                        .foregroundColor(Color(hex: "#7C3AED")) // Purple for headers
+                        .foregroundColor(Color.primaryCoral) // Soft Coral for headers
                         .fontWeight(.semibold)
                 } else if line.contains("•") {
                     // Bullet points
                     HStack(alignment: .top, spacing: 8) {
                         Text("•")
-                            .foregroundColor(Color(hex: "#7C3AED")) // Purple bullet
+                            .foregroundColor(Color.primaryCoral) // Soft Coral bullet
                             .font(.body)
                         Text(line.replacingOccurrences(of: "• ", with: ""))
                             .font(.body)
-                            .foregroundColor(.white) // White text
+                            .foregroundColor(Color.charcoal) // Charcoal text
                     }
                 } else if line.contains("✅") || line.contains("📝") || line.contains("❌") {
                     // Action items
@@ -89,7 +89,7 @@ struct ModernChatBubble: View {
                     // Regular text
                                             Text(line)
                             .font(.body)
-                            .foregroundColor(.white) // White text
+                            .foregroundColor(Color.charcoal) // Charcoal text
                 }
             }
         }
