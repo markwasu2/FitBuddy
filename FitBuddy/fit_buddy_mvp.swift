@@ -1201,37 +1201,42 @@ struct AICoachView: View {
                 // Input area
                 VStack(spacing: 0) {
                     Divider()
-                        .background(Color(hex: "#374151"))
+                        .background(Color(red: 209/255, green: 213/255, blue: 219/255)) // Light gray divider
                     
                     HStack(spacing: 12) {
                         TextField("Ask your AI coach...", text: $messageText)
                             .textFieldStyle(PlainTextFieldStyle())
                             .padding(.horizontal, 16)
                             .padding(.vertical, 12)
-                            .background(Color(hex: "#1C1C2E"))
+                            .background(Color.white) // White background
                             .cornerRadius(24)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color(red: 31/255, green: 41/255, blue: 55/255)) // Dark text
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 24)
+                                    .stroke(Color(red: 209/255, green: 213/255, blue: 219/255), lineWidth: 1) // Light border
+                            )
                         
                         Button(action: sendMessage) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 32))
-                                .foregroundColor(messageText.isEmpty ? Color(hex: "#6B7280") : Color(hex: "#7C3AED"))
+                                .foregroundColor(messageText.isEmpty ? Color(red: 156/255, green: 163/255, blue: 175/255) : Color(red: 59/255, green: 130/255, blue: 246/255)) // Gray when empty, blue when has text
                         }
                         .disabled(messageText.isEmpty)
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 16)
-                    .background(Color(hex: "#0D0D1A"))
+                    .background(Color(red: 248/255, green: 250/255, blue: 252/255)) // Very light gray background
                 }
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color(red: 248/255, green: 250/255, blue: 252/255)) // Very light gray background
             .navigationTitle("AI Coach")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingProfile = true }) {
                         Image(systemName: "person.circle")
-                            .foregroundColor(Color(hex: "#7C3AED"))
+                            .foregroundColor(Color(red: 59/255, green: 130/255, blue: 246/255)) // Blue
                     }
                 }
             }
