@@ -80,13 +80,13 @@ struct CalendarGrid: View {
                             VStack(spacing: 2) {
                                 Text("\(calendar.component(.day, from: date))")
                                     .font(.body)
-                                    .foregroundColor(isToday ? .accentBlue : .textPrimary)
+                                    .foregroundColor(isToday ? .primaryCoral : .textPrimary)
                                     .frame(width: 32, height: 32)
-                                    .background(isSelected ? Color.accentBlue.opacity(0.15) : .clear)
+                                    .background(isSelected ? Color.primaryCoral.opacity(0.15) : .clear)
                                     .clipShape(Circle())
                                 if hasWorkout {
                                     Circle()
-                                        .fill(isToday ? Color.accentBlue : Color.accentMint)
+                                        .fill(isToday ? Color.primaryCoral : Color.primaryCoral)
                                         .frame(width: 6, height: 6)
                                 } else {
                                     Spacer().frame(height: 6)
@@ -131,7 +131,7 @@ struct DailyWorkoutView: View {
             if entry.exercises.isEmpty {
                 Text("No exercises yet.")
                     .font(.body)
-                    .foregroundColor(.textDim)
+                    .foregroundColor(.textSecondary)
                     .padding(.top, 40)
             } else {
                 ChecklistCard(entry: $entry)
@@ -142,14 +142,14 @@ struct DailyWorkoutView: View {
             Button(action: { showPicker = true }) {
                 HStack {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.accentMint)
+                        .foregroundColor(.primaryCoral)
                     Text("Add Exercise")
                         .font(.body)
-                        .foregroundColor(.accentMint)
+                        .foregroundColor(.primaryCoral)
                 }
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
-                .background(Color.bgCard)
+                .background(Color.bgSecondary)
                 .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -160,7 +160,7 @@ struct DailyWorkoutView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.accentBlue)
+                    .background(Color.primaryCoral)
                     .cornerRadius(14)
             }
             .padding(.horizontal)
@@ -225,7 +225,7 @@ struct ChecklistToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack {
             Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(configuration.isOn ? .accentBlue : .glyphGray)
+                .foregroundColor(configuration.isOn ? .primaryCoral : .textSecondary)
                 .font(.system(size: 24))
                 .onTapGesture { configuration.isOn.toggle() }
             configuration.label
@@ -240,10 +240,10 @@ struct ProgressRing: View {
     var body: some View {
         ZStack {
             Circle()
-                .stroke(Color.glyphGray.opacity(0.2), lineWidth: 8)
+                .stroke(Color.textSecondary.opacity(0.2), lineWidth: 8)
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color.accentBlue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .stroke(Color.primaryCoral, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(), value: progress)
         }
@@ -290,7 +290,7 @@ struct ExercisePickerSheet: View {
                             }) {
                                 HStack {
                                     Image(systemName: tempSelected.contains(ex) ? "checkmark.square.fill" : "square")
-                                        .foregroundColor(tempSelected.contains(ex) ? .accentBlue : .glyphGray)
+                                        .foregroundColor(tempSelected.contains(ex) ? .primaryCoral : .textSecondary)
                                     Text(ex.name)
                                         .font(.body)
                                         .foregroundColor(.textPrimary)
@@ -299,7 +299,7 @@ struct ExercisePickerSheet: View {
                                 .padding(.vertical, 10)
                                 .padding(.horizontal)
                             }
-                            .background(Color.bgCard)
+                            .background(Color.bgSecondary)
                         }
                     }
                 }
@@ -313,7 +313,7 @@ struct ExercisePickerSheet: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.accentBlue)
+                        .background(Color.primaryCoral)
                         .cornerRadius(14)
                 }
                 .padding()
@@ -386,15 +386,15 @@ struct JournalCell: View {
                     .foregroundColor(.textPrimary)
                 Text("\(entry.exercises.count) exercises")
                     .font(.caption)
-                    .foregroundColor(.textDim)
+                    .foregroundColor(.textSecondary)
             }
             Spacer()
             Sparkline(data: calories)
-                .stroke(Color.accentBlue, lineWidth: 2)
+                .stroke(Color.textSecondary, lineWidth: 2)
                 .frame(width: 36, height: 16)
             Text(percent == 100 ? "100%" : "\(percent)%")
                 .font(.caption)
-                .foregroundColor(percent == 100 ? .accentMint : .accentBlue)
+                .foregroundColor(percent == 100 ? .primaryCoral : .primaryCoral)
         }
         .padding(.vertical, 8)
     }

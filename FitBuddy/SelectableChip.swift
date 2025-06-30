@@ -13,16 +13,16 @@ struct SelectableChip: View {
         }) {
             Text(title)
                 .font(.system(size: 14, weight: .semibold, design: .default))
-                .foregroundColor(isSelected ? Color(hex: "#FC4C02") : Color(.systemGray))
+                .foregroundColor(isSelected ? Color.primaryCoral : Color.textSecondary)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 12)
                 .background(
                     Capsule()
-                        .fill(isSelected ? Color(hex: "#FC4C02").opacity(0.15) : Color(.systemGray6))
+                        .fill(isSelected ? Color.primaryCoral.opacity(0.15) : Color.bgSecondary)
                 )
                 .overlay(
                     Capsule()
-                        .stroke(isSelected ? Color(hex: "#FC4C02") : Color(.systemGray4), lineWidth: 1)
+                        .stroke(isSelected ? Color.primaryCoral : Color.textSecondary, lineWidth: 1)
                 )
         }
         .buttonStyle(PlainButtonStyle())

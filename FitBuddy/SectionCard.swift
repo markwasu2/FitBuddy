@@ -18,9 +18,9 @@ struct SectionCard<Content: View>: View {
             content
         }
         .padding(16)
-        .background(Color(hex: "#F7F7F7"))
+        .background(Color.bgSecondary)
         .cornerRadius(12)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+        .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 2)
     }
 }
 

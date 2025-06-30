@@ -4,11 +4,8 @@ import HealthKit
 // MARK: - DASHBOARD-SPECIFIC EXTENSIONS
 
 extension Color {
-    static let bgCard      = Color(red: 0.976, green: 0.980, blue: 0.988)
-    static let accentMint  = Color(red: 0.0, green: 0.776, blue: 0.635)
-    static let glyphGray   = Color(red: 0.702, green: 0.718, blue: 0.753)
-    static let textDim     = Color(red: 0.427, green: 0.435, blue: 0.455)
-    static let dangerRed   = Color(red: 1.0, green: 0.231, blue: 0.188)
+    // Remove custom dashboard colors
+    // Use main palette only
 }
 
 extension Font {
@@ -19,9 +16,9 @@ extension Font {
 extension View {
     func fhCard() -> some View {
         self.padding(20)
-            .background(Color.bgCard)
+            .background(Color.bgSecondary)
             .cornerRadius(18)
-            .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+            .shadow(color: Color.cardShadow, radius: 8, x: 0, y: 4)
     }
 }
 
@@ -48,7 +45,7 @@ struct FitBuddyDashboard: View {
                                 .foregroundColor(.textPrimary)
                             Text(today, format: .dateTime.weekday().month().day())
                                 .font(.caption)
-                                .foregroundColor(.textDim)
+                                .foregroundColor(.textSecondary)
                         }
                         Spacer()
                     }
@@ -122,7 +119,7 @@ struct MetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text(title).font(.caption).foregroundColor(.textDim)
+                Text(title).font(.caption).foregroundColor(.textSecondary)
                 Spacer()
                 TrendGlyph(trend: trend)
             }
@@ -132,10 +129,10 @@ struct MetricCard: View {
                     .foregroundColor(.textPrimary)
                 Text(unit)
                     .font(.caption)
-                    .foregroundColor(.textDim)
+                    .foregroundColor(.textSecondary)
             }
             Sparkline(data: latestWeekData)
-                .stroke(Color.accentBlue, lineWidth: 1.5)
+                .stroke(Color.primaryCoral, lineWidth: 1.5)
                 .frame(height: 22)
         }
         .fhCard()
@@ -155,13 +152,13 @@ struct TrendGlyph: View {
         switch trend {
         case .up:
             Image(systemName: "arrow.up")
-                .foregroundColor(.accentMint)
+                .foregroundColor(.primaryCoral)
         case .down:
             Image(systemName: "arrow.down")
-                .foregroundColor(.dangerRed)
+                .foregroundColor(.mutedTerracotta)
         case .flat:
             Image(systemName: "equal")
-                .foregroundColor(.glyphGray)
+                .foregroundColor(.textSecondary)
         }
     }
 }
@@ -174,9 +171,9 @@ struct ActivityRingGrid: View {
     let workouts: [Double]
     var body: some View {
         HStack(spacing: 20) {
-            ActivityRingView(title: "Steps", value: steps.last ?? 0, goal: 10000, color: .accentBlue, data: steps)
-            ActivityRingView(title: "Calories", value: calories.last ?? 0, goal: 500, color: .accentMint, data: calories)
-            ActivityRingView(title: "Workouts", value: workouts.last ?? 0, goal: 5, color: .dangerRed, data: workouts)
+            ActivityRingView(title: "Steps", value: steps.last ?? 0, goal: 10000, color: .primaryCoral, data: steps)
+            ActivityRingView(title: "Calories", value: calories.last ?? 0, goal: 500, color: .primaryCoral, data: calories)
+            ActivityRingView(title: "Workouts", value: workouts.last ?? 0, goal: 5, color: .mutedTerracotta, data: workouts)
         }
     }
 }
@@ -195,7 +192,7 @@ struct ActivityRingView: View {
             TimelineView(.animation) { _ in
                 ZStack {
                     Circle()
-                        .stroke(Color.bgCard, lineWidth: 8)
+                        .stroke(Color.bgSecondary, lineWidth: 8)
                     Circle()
                         .trim(from: 0, to: progress)
                         .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
@@ -206,7 +203,7 @@ struct ActivityRingView: View {
             }
             Text(title)
                 .font(.caption)
-                .foregroundColor(.textDim)
+                .foregroundColor(.textSecondary)
             Text("\(Int(value))")
                 .font(.body)
                 .foregroundColor(.textPrimary)
@@ -224,7 +221,7 @@ struct WorkoutHistorySection: View {
             Text("Latest Workouts")
                 .font(.h2)
                 .foregroundColor(.textPrimary)
-            ForEach(entries.prefix(3)) { entry in
+            ForEach(Array(entries.prefix(3)), id: \.id) { entry in
                 HStack {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.type)
@@ -232,12 +229,12 @@ struct WorkoutHistorySection: View {
                             .foregroundColor(.textPrimary)
                         Text(entry.date, style: .date)
                             .font(.caption)
-                            .foregroundColor(.textDim)
+                            .foregroundColor(.textSecondary)
                     }
                     Spacer()
                     Text("\(entry.duration) min")
                         .font(.caption)
-                        .foregroundColor(.textDim)
+                        .foregroundColor(.textSecondary)
                 }
                 .fhCard()
             }
@@ -269,13 +266,13 @@ struct ProfileEditView: View {
         NavigationView {
             VStack(spacing: 24) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Name").font(.caption).foregroundColor(.textDim)
+                    Text("Name").font(.caption).foregroundColor(.textSecondary)
                     TextField("Enter your name", text: $name)
                         .font(.body)
                         .textFieldStyle(.roundedBorder)
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Weight").font(.caption).foregroundColor(.textDim)
+                    Text("Weight").font(.caption).foregroundColor(.textSecondary)
                     HStack {
                         Picker("", selection: $weight) {
                             ForEach(70...350, id: \.self) { v in
@@ -292,7 +289,7 @@ struct ProfileEditView: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Height").font(.caption).foregroundColor(.textDim)
+                    Text("Height").font(.caption).foregroundColor(.textSecondary)
                     Picker("", selection: $heightMode) {
                         Text("cm").tag("cm")
                         Text("ft/in").tag("ft")
@@ -323,7 +320,7 @@ struct ProfileEditView: View {
                     }
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Age").font(.caption).foregroundColor(.textDim)
+                    Text("Age").font(.caption).foregroundColor(.textSecondary)
                     Picker("", selection: $age) {
                         ForEach(10...100, id: \.self) { v in
                             Text("\(v)").tag(v)
@@ -332,7 +329,7 @@ struct ProfileEditView: View {
                     .frame(width: 80)
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Fitness Level").font(.caption).foregroundColor(.textDim)
+                    Text("Fitness Level").font(.caption).foregroundColor(.textSecondary)
                     HStack {
                         ForEach(levelOptions, id: \.self) { opt in
                             Button(action: { level = opt }) {
@@ -340,15 +337,15 @@ struct ProfileEditView: View {
                                     .font(.caption)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 6)
-                                    .background(level == opt ? Color.accentBlue : Color.bgCard)
-                                    .foregroundColor(level == opt ? .white : .textPrimary)
+                                    .background(level == opt ? Color.primaryCoral : Color.bgSecondary)
+                                    .foregroundColor(level == opt ? .white : Color.textPrimary)
                                     .cornerRadius(14)
                             }
                         }
                     }
                 }
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Equipment").font(.caption).foregroundColor(.textDim)
+                    Text("Equipment").font(.caption).foregroundColor(.textSecondary)
                     WrapHStack(items: equipmentOptions, selected: $equipment)
                 }
                 Spacer()
@@ -358,7 +355,7 @@ struct ProfileEditView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(hasChanges ? Color.accentBlue : Color.glyphGray)
+                        .background(hasChanges ? Color.primaryCoral : Color.textSecondary)
                         .cornerRadius(14)
                 }
                 .disabled(!hasChanges)
@@ -417,8 +414,8 @@ struct WrapHStack: View {
                                 .font(.caption)
                                 .padding(.horizontal, 10)
                                 .padding(.vertical, 6)
-                                .background(selected.contains(item) ? Color.accentBlue : Color.bgCard)
-                                .foregroundColor(selected.contains(item) ? .white : .textPrimary)
+                                .background(selected.contains(item) ? Color.primaryCoral : Color.bgSecondary)
+                                .foregroundColor(selected.contains(item) ? .white : Color.textPrimary)
                                 .cornerRadius(12)
                         }
                     }
@@ -430,6 +427,8 @@ struct WrapHStack: View {
 
 extension Array {
     func chunked(into size: Int) -> [[Element]] {
-        stride(from: 0, to: count, by: size).map { Array(self[$0..<Swift.min($0 + size, count)]) }
+        return stride(from: 0, to: count, by: size).map {
+            Array(self[$0 ..< Swift.min($0 + size, count)])
+        }
     }
 } 

@@ -27,22 +27,22 @@ struct ProfileEditSheet: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 24) {
-                        // Name Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Name")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             TextField("Enter your name", text: $name)
                                 .font(.system(size: 17))
                                 .textFieldStyle(.roundedBorder)
                                 .autocapitalization(.words)
                         }
+                        .background(Color.bgSecondary)
                         
                         // Weight Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Weight")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             HStack(spacing: 16) {
                                 Picker("Weight Value", selection: $weightValue) {
                                     ForEach(30...350, id: \.self) { value in
@@ -68,12 +68,13 @@ struct ProfileEditSheet: View {
                                 }
                             }
                         }
+                        .background(Color.bgSecondary)
                         
                         // Height Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Height")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             
                             Picker("Height Mode", selection: $heightMode) {
                                 Text("Centimeters").tag("cm")
@@ -111,12 +112,13 @@ struct ProfileEditSheet: View {
                                 .onChange(of: inches) { oldValue, newValue in updateHeightCM() }
                             }
                         }
+                        .background(Color.bgSecondary)
                         
                         // Age Section
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Age")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             Picker("Age", selection: $age) {
                                 ForEach(10...100, id: \.self) { value in
                                     Text("\(value) years").tag(value)
@@ -124,12 +126,13 @@ struct ProfileEditSheet: View {
                             }
                             .pickerStyle(.wheel)
                         }
+                        .background(Color.bgSecondary)
                         
                         // Fitness Level Section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Fitness Level")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             HStack(spacing: 12) {
                                 ForEach(levelOptions, id: \.self) { option in
                                     Button(action: { level = option }) {
@@ -148,12 +151,13 @@ struct ProfileEditSheet: View {
                                 }
                             }
                         }
+                        .background(Color.bgSecondary)
                         
                         // Equipment Section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Equipment")
                                 .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color(red: 142/255, green: 142/255, blue: 147/255))
+                                .foregroundColor(Color.textSecondary)
                             LazyVGrid(columns: [
                                 GridItem(.flexible()),
                                 GridItem(.flexible()),
@@ -178,12 +182,14 @@ struct ProfileEditSheet: View {
                                 }
                             }
                         }
+                        .background(Color.bgSecondary)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 100) // Space for save button
                 }
             }
+            .background(Color.bgPrimary)
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

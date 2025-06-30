@@ -27,7 +27,7 @@ struct EditProfileView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(.systemGroupedBackground)
+                Color.bgPrimary
                     .ignoresSafeArea()
                 
                 ScrollView {
@@ -36,20 +36,21 @@ struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Name")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             TextField("Enter your name", text: $name)
                                 .textFieldStyle(RoundedBorderTextFieldStyle())
                                 .font(.title3)
                                 .textInputAutocapitalization(.words)
                         }
+                        .background(Color.bgSecondary)
                         .padding(.horizontal)
                         
                         // Weight Section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Weight")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             VStack(spacing: 16) {
                                 Picker("Weight Unit", selection: $weightUnit) {
@@ -81,7 +82,7 @@ struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Height")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             VStack(spacing: 16) {
                                 Picker("Height Unit", selection: $heightUnit) {
@@ -144,7 +145,7 @@ struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Age")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             HStack {
                                 WheelPicker(value: $age, range: 5...100, step: 1)
@@ -164,7 +165,7 @@ struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Fitness Intensity")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             VStack(spacing: 16) {
                                 VStack(spacing: 8) {
@@ -194,7 +195,7 @@ struct EditProfileView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("Available Equipment")
                                 .font(.headline)
-                                .foregroundColor(.secondary)
+                                .foregroundColor(Color.textSecondary)
                             
                             ChipFlowLayout(items: equipmentOptions, selectedItems: $selectedEquipment)
                         }

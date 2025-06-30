@@ -39,11 +39,14 @@ extension Color {
     // Light surface - Off-White
     static let offWhite = Color(hex: "#FDFCFB")
     
+    // Warm contrasting background - Soft Cream
+    static let warmCream = Color(hex: "#F8F4F0")
+    
     // Dark text / backgrounds - Charcoal
     static let charcoal = Color(hex: "#333333")
     
     // Background colors
-    static let bgPrimary = Color.offWhite
+    static let bgPrimary = Color.warmCream
     static let bgSecondary = Color.white
     static let textPrimary = Color.charcoal
     static let textSecondary = Color(hex: "#666666")
@@ -88,6 +91,7 @@ struct FitBuddyApp: App {
     @StateObject private var geminiService = GeminiService()
     @StateObject private var calendarManager = CalendarManager()
     @StateObject private var workoutPlanManager = WorkoutPlanManager()
+    @StateObject private var workoutJournal = WorkoutJournal()
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var notificationManager = NotificationManager()
     
@@ -99,6 +103,7 @@ struct FitBuddyApp: App {
                 .environmentObject(geminiService)
                 .environmentObject(calendarManager)
                 .environmentObject(workoutPlanManager)
+                .environmentObject(workoutJournal)
                 .environmentObject(healthKitManager)
                 .environmentObject(notificationManager)
         }
@@ -743,24 +748,25 @@ struct DashboardView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
     @EnvironmentObject var healthKitManager: HealthKitManager
+    @EnvironmentObject var workoutJournal: WorkoutJournal
     @State private var showingQuickActions = false
+    @State private var showStartWorkout = false
+    @State private var showLogActivity = false
+    @State private var navigateToPlan = false
+    @State private var navigateToAICoach = false
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
                     // Header
                     headerSection
-                    
                     // Quick Actions
                     quickActionsSection
-                    
                     // Current Activity
                     currentActivitySection
-                    
                     // Biometrics
                     biometricsSection
-                    
                     // Activity Journal
                     activityJournalSection
                 }
@@ -769,6 +775,24 @@ struct DashboardView: View {
             }
             .background(Color.offWhite)
             .navigationBarHidden(true)
+            .sheet(isPresented: $showStartWorkout) {
+                StartWorkoutSheet()
+                    .environmentObject(workoutPlanManager)
+            }
+            .sheet(isPresented: $showLogActivity) {
+                LogActivitySheet()
+                    .environmentObject(workoutJournal)
+            }
+            .navigationDestination(isPresented: $navigateToPlan) {
+                CalendarView()
+                    .environmentObject(workoutPlanManager)
+                    .environmentObject(CalendarManager())
+            }
+            .navigationDestination(isPresented: $navigateToAICoach) {
+                AICoachView()
+                    .environmentObject(GeminiService())
+                    .environmentObject(profileManager)
+            }
         }
     }
     
@@ -813,7 +837,6 @@ struct DashboardView: View {
                 .font(.headline)
                 .fontWeight(.semibold)
                 .foregroundColor(.white)
-            
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
                 QuickActionCard(
                     title: "Start Workout",
@@ -821,34 +844,31 @@ struct DashboardView: View {
                     icon: "play.fill",
                     color: Color.primaryCoral
                 ) {
-                    // TODO: Start workout action
+                    showStartWorkout = true
                 }
-                
                 QuickActionCard(
                     title: "Log Activity",
                     subtitle: "Record your progress",
                     icon: "plus.circle.fill",
                     color: Color.secondaryPeach
                 ) {
-                    // TODO: Log activity action
+                    showLogActivity = true
                 }
-                
                 QuickActionCard(
                     title: "View Plan",
                     subtitle: "Check your schedule",
                     icon: "calendar.badge.clock",
                     color: Color.ctaYellow
                 ) {
-                    // TODO: View plan action
+                    navigateToPlan = true
                 }
-                
                 QuickActionCard(
                     title: "AI Coach",
                     subtitle: "Get personalized advice",
                     icon: "brain.head.profile",
                     color: Color.highlightApricot
                 ) {
-                    // TODO: AI coach action
+                    navigateToAICoach = true
                 }
             }
         }
@@ -911,7 +931,7 @@ struct DashboardView: View {
                     value: "7.5",
                     unit: "hrs",
                     icon: "bed.double.fill",
-                    color: Color(hex: "#8B5CF6")
+                    color: Color.secondaryPeach
                 )
                 
                 BiometricCard(
@@ -939,7 +959,7 @@ struct DashboardView: View {
                 Text("Recent Activities")
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
@@ -947,7 +967,7 @@ struct DashboardView: View {
                     // TODO: Navigate to activities
                 }
                 .font(.subheadline)
-                .foregroundColor(Color(hex: "#7C3AED"))
+                .foregroundColor(Color.primaryCoral)
             }
             
             VStack(spacing: 12) {
@@ -1037,7 +1057,7 @@ struct ActivityJournalCard: View {
     var body: some View {
         HStack(spacing: 16) {
             Circle()
-                .fill(Color(hex: "#7C3AED"))
+                .fill(Color.primaryCoral)
                 .frame(width: 40, height: 40)
                 .overlay(
                     Image(systemName: "dumbbell.fill")
@@ -1082,21 +1102,21 @@ struct PlanScreen: View {
                             Text("June 2025")
                                 .font(.title2)
                                 .fontWeight(.bold)
-                                .foregroundColor(.white)
+                                .foregroundColor(Color.textPrimary)
                             Spacer()
                             HStack(spacing: 8) {
                                 Button(action: {}) {
                                     Image(systemName: "chevron.left")
-                                        .foregroundColor(.white)
+                                        .foregroundColor(Color.textPrimary)
                                         .padding(8)
-                                        .background(Color(hex: "#374151"))
+                                        .background(Color.white)
                                         .clipShape(Circle())
                                 }
                                 Button(action: {}) {
                                     Image(systemName: "chevron.right")
-                                        .foregroundColor(.white)
+                                        .foregroundColor(Color.textPrimary)
                                         .padding(8)
-                                        .background(Color(hex: "#374151"))
+                                        .background(Color.white)
                                         .clipShape(Circle())
                                 }
                             }
@@ -1105,15 +1125,15 @@ struct PlanScreen: View {
                         // Calendar grid would go here
                         // For now, showing a placeholder
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(hex: "#1C1C2E"))
+                            .fill(Color.white)
                             .frame(height: 200)
                             .overlay(
                                 Text("Calendar View")
-                                    .foregroundColor(.white)
+                                    .foregroundColor(Color.textPrimary)
                             )
                     }
                     .padding(16)
-                    .background(Color(hex: "#1C1C2E"))
+                    .background(Color.white)
                     .cornerRadius(16)
                     .padding(.horizontal)
                     
@@ -1122,7 +1142,7 @@ struct PlanScreen: View {
                         Text("Upcoming")
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(Color.textPrimary)
                             .padding(.horizontal)
                         
                         VStack(spacing: 12) {
@@ -1130,14 +1150,14 @@ struct PlanScreen: View {
                                 title: "Full Body Strength",
                                 time: "Today • 60 min",
                                 icon: "dumbbell.fill",
-                                iconColor: Color(hex: "#7C3AED")
+                                iconColor: Color.primaryCoral
                             )
                             
                             WorkoutCard(
                                 title: "Active Recovery & Stretch",
                                 time: "Tomorrow • 30 min",
                                 icon: "figure.flexibility",
-                                iconColor: Color(hex: "#60A5FA")
+                                iconColor: Color.secondaryPeach
                             )
                         }
                         .padding(.horizontal)
@@ -1145,10 +1165,10 @@ struct PlanScreen: View {
                 }
                 .padding(.vertical)
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationTitle("Workout Plan")
             .navigationBarTitleDisplayMode(.large)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarColorScheme(.light, for: .navigationBar)
         }
     }
 }
@@ -1174,19 +1194,19 @@ struct WorkoutCard: View {
                 Text(title)
                     .font(.headline)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 Text(time)
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()
             
             Image(systemName: "chevron.right")
-                .foregroundColor(Color(hex: "#6B7280"))
+                .foregroundColor(Color.textSecondary)
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
     }
 }
@@ -1319,14 +1339,14 @@ struct ProfileView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Extra padding for tab bar
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.bgPrimary)
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingEditProfile = true }) {
                         Image(systemName: "pencil")
-                            .foregroundColor(Color(hex: "#7C3AED"))
+                            .foregroundColor(Color.primaryCoral)
                     }
                 }
             }
@@ -1341,7 +1361,7 @@ struct ProfileView: View {
             // Profile Image
             ZStack {
                 Circle()
-                    .fill(Color(hex: "#7C3AED"))
+                    .fill(Color.primaryCoral)
                     .frame(width: 100, height: 100)
                 
                 Text(String((profileManager.name.prefix(1)).uppercased()))
@@ -1354,11 +1374,11 @@ struct ProfileView: View {
                 Text(profileManager.name)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("user@example.com")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
                 
                 HStack(spacing: 16) {
                     ProfileInfoItem(title: "Age", value: "\(profileManager.age)")
@@ -1368,7 +1388,7 @@ struct ProfileView: View {
             }
         }
         .padding(24)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(16)
     }
     
@@ -1377,14 +1397,14 @@ struct ProfileView: View {
             Text("Your Stats")
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
                 ProfileStatCard(
                     title: "Total Workouts",
                     value: "\(workoutPlanManager.plans.count)",
                     icon: "dumbbell.fill",
-                    color: Color(hex: "#7C3AED")
+                    color: Color.primaryCoral
                 )
                 
                 ProfileStatCard(
@@ -1423,7 +1443,7 @@ struct ProfileView: View {
                     title: "Edit Profile",
                     subtitle: "Update your information",
                     icon: "person.circle.fill",
-                    color: Color(hex: "#7C3AED")
+                    color: Color.primaryCoral
                 ) {
                     showingEditProfile = true
                 }
@@ -1454,7 +1474,7 @@ struct ProfileView: View {
             Text("Settings")
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             VStack(spacing: 12) {
                 ProfileActionRow(
@@ -1470,7 +1490,7 @@ struct ProfileView: View {
                     title: "Privacy",
                     subtitle: "Control your data",
                     icon: "lock.fill",
-                    color: Color(hex: "#8B5CF6")
+                    color: Color.secondaryPeach
                 ) {
                     // TODO: Navigate to privacy
                 }
@@ -1496,11 +1516,11 @@ struct ProfileInfoItem: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.subheadline)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
             
             Text(value)
                 .font(.body)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
         }
     }
 }
@@ -1595,14 +1615,14 @@ struct CalendarView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Extra padding for tab bar
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.bgPrimary)
             .navigationTitle("Calendar")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddWorkout = true }) {
                         Image(systemName: "plus")
-                            .foregroundColor(Color(hex: "#7C3AED"))
+                            .foregroundColor(Color.primaryCoral)
                     }
                 }
             }
@@ -1615,7 +1635,7 @@ struct CalendarView: View {
             HStack {
                 Button(action: { moveMonth(-1) }) {
                     Image(systemName: "chevron.left")
-                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .foregroundColor(Color.primaryCoral)
                 }
                 
                 Spacer()
@@ -1623,13 +1643,13 @@ struct CalendarView: View {
                 Text(monthYearString)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Spacer()
                 
                 Button(action: { moveMonth(1) }) {
                     Image(systemName: "chevron.right")
-                        .foregroundColor(Color(hex: "#7C3AED"))
+                        .foregroundColor(Color.primaryCoral)
                 }
             }
             
@@ -1639,7 +1659,7 @@ struct CalendarView: View {
                     Text(day)
                         .font(.caption)
                         .fontWeight(.medium)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -1658,7 +1678,7 @@ struct CalendarView: View {
             }
         }
         .padding(20)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(16)
     }
     
@@ -1667,27 +1687,27 @@ struct CalendarView: View {
             Text(selectedDateString)
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             if workoutsForSelectedDate.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 40))
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                     
                     Text("No workouts scheduled")
                         .font(.subheadline)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                     
                     Button("Add Workout") {
                         showingAddWorkout = true
                     }
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .foregroundColor(Color.primaryCoral)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(40)
-                .background(Color(hex: "#1C1C2E"))
+                .background(Color.white)
                 .cornerRadius(12)
             } else {
                 VStack(spacing: 12) {
@@ -1704,7 +1724,7 @@ struct CalendarView: View {
             Text("This Week")
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             HStack(spacing: 16) {
                 WeeklyStatCard(title: "Workouts", value: "5", icon: "dumbbell.fill")
@@ -1831,11 +1851,11 @@ struct CalendarDayView: View {
             VStack(spacing: 4) {
                 Text("\(Calendar.current.component(.day, from: date))")
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(isSelected ? .white : (hasWorkout ? .white : Color(hex: "#6B7280")))
+                    .foregroundColor(isSelected ? .white : (hasWorkout ? Color.textPrimary : Color.textSecondary))
                 
                 if hasWorkout {
                     Circle()
-                        .fill(Color(hex: "#7C3AED"))
+                        .fill(Color.primaryCoral)
                         .frame(width: 4, height: 4)
                 } else {
                     Circle()
@@ -1846,7 +1866,7 @@ struct CalendarDayView: View {
             .frame(width: 40, height: 40)
             .background(
                 Circle()
-                    .fill(isSelected ? Color(hex: "#7C3AED") : Color.clear)
+                    .fill(isSelected ? Color.primaryCoral : Color.clear)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -1863,20 +1883,20 @@ struct WeeklyStatCard: View {
         VStack(alignment: .leading, spacing: 4) {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundColor(Color(hex: "#7C3AED"))
+                .foregroundColor(Color.primaryCoral)
             
             Text(title)
                 .font(.subheadline)
                 .fontWeight(.medium)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
             
             Text(value)
                 .font(.title)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
     }
 }
@@ -1888,7 +1908,7 @@ struct ScheduledWorkoutCard: View {
     var body: some View {
         HStack(spacing: 16) {
             Circle()
-                .fill(Color(hex: "#7C3AED"))
+                .fill(Color.primaryCoral)
                 .frame(width: 40, height: 40)
                 .overlay(
                     Image(systemName: "dumbbell.fill")
@@ -1900,21 +1920,21 @@ struct ScheduledWorkoutCard: View {
                 Text(workout.type)
                     .font(.headline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("\(workout.duration) min")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             
             Spacer()
             
             Text(workout.date, style: .date)
                 .font(.caption)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
     }
 }
@@ -1929,13 +1949,13 @@ struct ActivityLogView: View {
                 Text("Activity Log")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Coming soon...")
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -1951,13 +1971,13 @@ struct WorkoutLogView: View {
                 Text("Workout Log")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Coming soon...")
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -1973,13 +1993,13 @@ struct NotificationsView: View {
                 Text("Notifications")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("No new notifications")
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -1996,13 +2016,13 @@ struct AddWorkoutView: View {
                 Text("Add Workout")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Coming soon...")
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -2019,13 +2039,13 @@ struct WorkoutDetailView: View {
                 Text("Workout Details")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text(workout.workoutPlan.title)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.offWhite)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -2046,7 +2066,7 @@ struct CircularProgressView: View {
             
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color(hex: "#7C3AED"), style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                .stroke(Color.primaryCoral, style: StrokeStyle(lineWidth: 4, lineCap: .round))
                 .frame(width: size, height: size)
                 .rotationEffect(.degrees(-90))
                 .animation(.easeInOut(duration: 0.5), value: progress)
@@ -2063,20 +2083,20 @@ struct StatCard: View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title)
                 .font(.caption)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
             
             Text(value)
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             Text(subtitle)
                 .font(.caption)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(8)
     }
 }
@@ -2090,7 +2110,7 @@ struct SummaryCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: icon)
-                    .foregroundColor(Color(hex: "#7C3AED"))
+                    .foregroundColor(Color.primaryCoral)
                     .font(.title3)
                 
                 Spacer()
@@ -2099,14 +2119,14 @@ struct SummaryCard: View {
             Text(value)
                 .font(.title2)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             Text(title)
                 .font(.caption)
-                .foregroundColor(Color(hex: "#9CA3AF"))
+                .foregroundColor(Color.textSecondary)
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
     }
 }
@@ -2125,10 +2145,10 @@ struct BiometricCard: View {
                 .foregroundColor(color)
             Text(title)
                 .font(.caption)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             Text("\(value) \(unit)")
                 .font(.headline)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
         }
         .padding()
         .background(color.opacity(0.2))
@@ -2142,7 +2162,7 @@ struct ActivitiesView: View {
     @State private var selectedFilter = "All"
     @State private var showingAddActivity = false
     
-    private let filters = ["All", "Strength", "Cardio", "Flexibility", "Sports"]
+    private let filters: [String] = ["All", "Strength", "Cardio", "Flexibility", "Sports"]
     
     var body: some View {
         NavigationView {
@@ -2160,14 +2180,14 @@ struct ActivitiesView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 100) // Extra padding for tab bar
             }
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.bgPrimary)
             .navigationTitle("Activities")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddActivity = true }) {
                         Image(systemName: "plus")
-                            .foregroundColor(Color(hex: "#7C3AED"))
+                            .foregroundColor(Color.primaryCoral)
                     }
                 }
             }
@@ -2233,7 +2253,7 @@ struct ActivitiesView: View {
             Text("Recent Activities")
                 .font(.headline)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(Color.textPrimary)
             
             VStack(spacing: 12) {
                 ForEach(sampleActivities, id: \.id) { activity in
@@ -2286,13 +2306,13 @@ struct AddActivityView: View {
                 Text("Add Activity")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(Color.textPrimary)
                 
                 Text("Coming soon...")
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(hex: "#0D0D1A"))
+            .background(Color.bgPrimary)
             .navigationBarTitleDisplayMode(.inline)
             .navigationBarItems(trailing: Button("Done") { dismiss() })
         }
@@ -2307,7 +2327,7 @@ struct DetailedActivityCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Circle()
-                    .fill(Color(hex: "#7C3AED"))
+                    .fill(Color.primaryCoral)
                     .frame(width: 40, height: 40)
                     .overlay(
                         Image(systemName: "dumbbell.fill")
@@ -2319,11 +2339,11 @@ struct DetailedActivityCard: View {
                     Text(activity.type)
                         .font(.headline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.textPrimary)
                     
                     Text("\(activity.duration) min • \(activity.exercises.count) exercises")
                         .font(.subheadline)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                 }
                 
                 Spacer()
@@ -2332,27 +2352,82 @@ struct DetailedActivityCard: View {
                     Text("\(activity.calories) cal")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(Color.textPrimary)
                     
                     Text(activity.date, style: .date)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "#9CA3AF"))
+                        .foregroundColor(Color.textSecondary)
                 }
             }
             
             HStack(spacing: 16) {
                 Label(activity.mood, systemImage: "face.smiling")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
                 
                 Label(activity.difficulty, systemImage: "speedometer")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "#9CA3AF"))
+                    .foregroundColor(Color.textSecondary)
             }
         }
         .padding(16)
-        .background(Color(hex: "#1C1C2E"))
+        .background(Color.white)
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Start Workout Sheet
+struct StartWorkoutSheet: View {
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        NavigationView {
+            List {
+                ForEach(workoutPlanManager.plans, id: \.id) { plan in
+                    Button(action: {
+                        // TODO: Start/log this workout
+                        dismiss()
+                    }) {
+                        VStack(alignment: .leading) {
+                            Text(plan.title)
+                            Text(plan.description).font(.subheadline).foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Start Workout")
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+// MARK: - Log Activity Sheet
+struct LogActivitySheet: View {
+    @EnvironmentObject var workoutJournal: WorkoutJournal
+    @Environment(\.dismiss) var dismiss
+    var body: some View {
+        NavigationView {
+            VStack {
+                List {
+                    ForEach(workoutJournal.entries, id: \.id) { entry in
+                        VStack(alignment: .leading) {
+                            Text(entry.type)
+                            Text(entry.date, style: .date).font(.caption)
+                        }
+                    }
+                }
+                Button("Add Activity") {
+                    // TODO: Add new activity
+                }
+                .padding()
+                .background(Color.primaryCoral)
+                .foregroundColor(.white)
+                .cornerRadius(12)
+                .padding(.top)
+            }
+            .navigationTitle("Log Activity")
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
     }
 }
 

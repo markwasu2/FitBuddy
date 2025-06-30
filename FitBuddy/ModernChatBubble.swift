@@ -25,34 +25,30 @@ struct ModernChatBubble: View {
             .foregroundColor(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.primaryCoral) // Soft Coral
+            .background(Color.primaryCoral)
             .cornerRadius(20)
-            .shadow(color: .black.opacity(0.15), radius: 4, x: 0, y: 2)
+            .shadow(color: Color.cardShadow, radius: 4, x: 0, y: 2)
     }
     
     private var botBubble: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Main message content
             if message.content.contains("**") {
-                // Rich text with formatting
                 richTextContent
             } else {
                 Text(message.content)
                     .font(.body)
-                    .foregroundColor(Color.charcoal) // Charcoal text for good contrast on light background
+                    .foregroundColor(Color.textPrimary)
                     .multilineTextAlignment(.leading)
             }
-            
-            // Action buttons for planning stage
             if message.content.contains("Schedule this") || message.content.contains("Edit something") {
                 actionButtons
             }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color.offWhite) // Off-white background
+        .background(Color.bgSecondary)
         .cornerRadius(20)
-        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+        .shadow(color: Color.cardShadow, radius: 2, x: 0, y: 1)
     }
     
     private var richTextContent: some View {
@@ -87,9 +83,9 @@ struct ModernChatBubble: View {
                     }
                 } else if !line.trimmingCharacters(in: .whitespaces).isEmpty {
                     // Regular text
-                                            Text(line)
-                            .font(.body)
-                            .foregroundColor(Color.charcoal) // Charcoal text
+                    Text(line)
+                        .font(.body)
+                        .foregroundColor(Color.charcoal) // Charcoal text
                 }
             }
         }
@@ -187,6 +183,6 @@ struct ChatInputBar: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(Color(red: 248/255, green: 250/255, blue: 252/255)) // Very light gray background
+        .background(Color.bgPrimary)
     }
 } 
