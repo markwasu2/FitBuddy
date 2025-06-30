@@ -707,6 +707,12 @@ struct MainTabView: View {
                 selectedTab = 0
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            // Reset to safe state when app becomes active
+            if selectedTab < 0 || selectedTab > 4 {
+                selectedTab = 0
+            }
+        }
     }
 }
 
@@ -1712,9 +1718,11 @@ struct CalendarView: View {
         
         // Add previous month days
         let previousMonthDays = firstWeekday - 1
-        for i in (1...previousMonthDays).reversed() {
-            if let date = calendar.date(byAdding: .day, value: -i, to: startOfMonth) {
-                days.append(date)
+        if previousMonthDays > 0 {
+            for i in (1...previousMonthDays).reversed() {
+                if let date = calendar.date(byAdding: .day, value: -i, to: startOfMonth) {
+                    days.append(date)
+                }
             }
         }
         
@@ -1726,10 +1734,12 @@ struct CalendarView: View {
         }
         
         // Add next month days to fill the grid
-        let remainingDays = 42 - days.count // 6 rows * 7 days
-        for day in 1...remainingDays {
-            if let date = calendar.date(byAdding: .day, value: day, to: days.last ?? startOfMonth) {
-                days.append(date)
+        let remainingDays = max(0, 42 - days.count) // 6 rows * 7 days, ensure non-negative
+        if remainingDays > 0 {
+            for day in 1...remainingDays {
+                if let date = calendar.date(byAdding: .day, value: day, to: days.last ?? startOfMonth) {
+                    days.append(date)
+                }
             }
         }
         
