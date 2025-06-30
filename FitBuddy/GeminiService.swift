@@ -6,8 +6,7 @@ class GeminiService: ObservableObject {
     @Published var messages: [ChatMessage] = []
     @Published var isProcessing = false
     
-    private let model = GenerativeModel(name: "gemini-1.5-flash", apiKey: Config.geminiAPIKey)
-    
+    private var model: GenerativeModel?
     private var profileManager: ProfileManager?
     private var calendarManager: CalendarManager?
     private var workoutPlanManager: WorkoutPlanManager?
@@ -25,6 +24,18 @@ class GeminiService: ObservableObject {
         )
         
         self.messages = [welcomeMessage]
+        initializeModel()
+    }
+    
+    private func initializeModel() {
+        // Try to initialize the model with the API key
+        do {
+            self.model = GenerativeModel(name: "gemini-1.5-flash", apiKey: Config.geminiAPIKey)
+            print("Gemini model initialized successfully")
+        } catch {
+            print("Failed to initialize Gemini model: \(error)")
+            self.model = nil
+        }
     }
     
     func configure(profileManager: ProfileManager, calendarManager: CalendarManager, workoutPlanManager: WorkoutPlanManager) {
@@ -43,8 +54,8 @@ class GeminiService: ObservableObject {
             self.messages.append(ChatMessage(content: message, isFromUser: true, timestamp: Date()))
         }
         
-        // Generate conversational response
-        let response = await generateConversationalResponse(message)
+        // Generate response using local intelligence
+        let response = await generateSmartResponse(message)
         
         // Add assistant response
         await MainActor.run {
@@ -61,111 +72,223 @@ class GeminiService: ObservableObject {
         }
     }
     
-    private func generateConversationalResponse(_ userMessage: String) async -> String {
-        // Build conversation context
-        let recentMessages = messages.suffix(10).map { msg in
-            "\(msg.isFromUser ? "User" : "Assistant"): \(msg.content)"
-        }.joined(separator: "\n")
-        
-        // Get user profile info
-        let profileInfo = getUserProfileInfo()
-        
-        // Create the system prompt
-        let systemPrompt = """
-        You are FitBuddy, a friendly and knowledgeable AI fitness coach. You help users with:
-        
-        1. **Creating personalized workout plans** - Ask for their goals, fitness level, and equipment, then create specific plans
-        2. **Updating workout plans** - Modify existing plans based on their feedback
-        3. **Scheduling workouts** - Help them schedule sessions in their calendar
-        4. **Profile updates** - Update their age, weight, height, goals, etc.
-        5. **Fitness advice** - Answer questions about nutrition, technique, recovery, etc.
-        
-        **User Profile:** \(profileInfo)
-        
-        **Recent Conversation:**
-        \(recentMessages)
-        
-        **Current User Message:** \(userMessage)
-        
-        **Instructions:**
-        - Be conversational and direct. Don't ask for information they've already provided.
-        - If they want a workout plan, create one immediately with specific exercises, sets, and reps.
-        - If they want to schedule something, ask for the date/time and then confirm the scheduling.
-        - If they want to update their profile, acknowledge the change and confirm it's saved.
-        - If they ask fitness questions, provide specific, actionable advice.
-        - Always be helpful and proactive. Don't revert to asking basic questions if they've already provided context.
-        
-        Respond naturally as a fitness coach would in a conversation.
-        """
-        
-        do {
-            // Add timeout to prevent hanging
-            let task = Task {
-                try await model.generateContent(systemPrompt)
-            }
-            
-            let response = try await withTimeout(seconds: 10) {
-                try await task.value
-            }
-            
-            let reply = response.text ?? "I'm here to help! What would you like to work on?"
-            
-            // Handle specific actions based on the response
-            await handleActions(userMessage: userMessage, response: reply)
-            
-            return reply
-        } catch {
-            print("Gemini API Error: \(error)")
-            return "I'm having trouble connecting right now. Let me help you with a workout plan or fitness advice. What would you like to focus on?"
-        }
-    }
-    
-    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-        try await withThrowingTaskGroup(of: T.self) { group in
-            group.addTask {
-                try await operation()
-            }
-            
-            group.addTask {
-                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-                throw TimeoutError()
-            }
-            
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
-        }
-    }
-    
-    private struct TimeoutError: Error {}
-    
-    private func handleActions(userMessage: String, response: String) async {
+    private func generateSmartResponse(_ userMessage: String) async -> String {
         let lowercased = userMessage.lowercased()
         
-        // Handle scheduling requests
-        if lowercased.contains("schedule") || lowercased.contains("calendar") || lowercased.contains("book") {
-            if let (date, time) = parseDateAndTime(userMessage) {
-                scheduleWorkout?(date, time, "Workout Session")
-            }
+        // Handle specific intents with local intelligence
+        if lowercased.contains("workout") || lowercased.contains("exercise") || lowercased.contains("training") {
+            return generateWorkoutPlan(userMessage)
         }
         
-        // Handle profile updates
-        if lowercased.contains("weight") || lowercased.contains("height") || lowercased.contains("age") || 
-           lowercased.contains("goal") || lowercased.contains("fitness level") {
-            updateProfile?(userMessage)
+        if lowercased.contains("schedule") || lowercased.contains("calendar") || lowercased.contains("book") {
+            return handleScheduling(userMessage)
         }
+        
+        if lowercased.contains("weight") || lowercased.contains("height") || lowercased.contains("age") || 
+           lowercased.contains("goal") || lowercased.contains("profile") {
+            return handleProfileUpdate(userMessage)
+        }
+        
+        if lowercased.contains("nutrition") || lowercased.contains("diet") || lowercased.contains("food") {
+            return generateNutritionAdvice(userMessage)
+        }
+        
+        if lowercased.contains("hello") || lowercased.contains("hi") || lowercased.contains("hey") {
+            return "Hello! I'm your FitBuddy coach. I can help you with:\n\n• **Workout Plans** - Create personalized exercise routines\n• **Scheduling** - Book workout sessions in your calendar\n• **Profile Updates** - Update your fitness goals and stats\n• **Nutrition Advice** - Get healthy eating tips\n\nWhat would you like to work on today?"
+        }
+        
+        // Default helpful response
+        return "I'm here to help you with your fitness journey! I can assist with:\n\n• Creating personalized workout plans\n• Scheduling training sessions\n• Updating your fitness profile\n• Providing nutrition advice\n• Answering fitness questions\n\nJust let me know what you'd like to focus on!"
     }
     
-    private func getUserProfileInfo() -> String {
-        guard let profile = profileManager else { return "Profile not loaded" }
+    private func generateWorkoutPlan(_ userMessage: String) -> String {
+        let lowercased = userMessage.lowercased()
+        
+        if lowercased.contains("strength") || lowercased.contains("muscle") {
+            return """
+            **Strength Training Workout Plan**
+            
+            Here's a great strength training routine for you:
+            
+            **Warm-up (5-10 minutes):**
+            • Light cardio (jogging, cycling)
+            • Dynamic stretches
+            
+            **Main Workout:**
+            • **Squats**: 3 sets × 12 reps
+            • **Push-ups**: 3 sets × 10-15 reps
+            • **Dumbbell Rows**: 3 sets × 12 reps each arm
+            • **Lunges**: 3 sets × 10 reps each leg
+            • **Plank**: 3 sets × 30-60 seconds
+            
+            **Cool-down (5 minutes):**
+            • Static stretches
+            • Foam rolling
+            
+            **Total Time**: 45-60 minutes
+            **Difficulty**: Beginner to Intermediate
+            
+            Would you like me to schedule this workout for you or modify it based on your equipment?
+            """
+        }
+        
+        if lowercased.contains("cardio") || lowercased.contains("running") || lowercased.contains("cycling") {
+            return """
+            **Cardio Workout Plan**
+            
+            Here's an effective cardio routine:
+            
+            **Warm-up (5 minutes):**
+            • Light walking or cycling
+            
+            **Main Workout (30-45 minutes):**
+            • **Interval Training**: 30 seconds sprint, 90 seconds walk (repeat 10-15 times)
+            • **Steady State**: 20 minutes moderate pace
+            • **Cool-down**: 5 minutes easy pace
+            
+            **Alternative Options:**
+            • **HIIT**: 20 minutes high-intensity intervals
+            • **Long Distance**: 45-60 minutes steady pace
+            • **Hill Training**: 30 minutes with incline
+            
+            **Target Heart Rate**: 70-85% of max heart rate
+            
+            Would you like me to schedule this cardio session?
+            """
+        }
+        
+        if lowercased.contains("yoga") || lowercased.contains("flexibility") || lowercased.contains("stretch") {
+            return """
+            **Yoga & Flexibility Workout**
+            
+            Here's a relaxing yoga sequence:
+            
+            **Opening (5 minutes):**
+            • Child's Pose
+            • Cat-Cow Stretches
+            • Sun Salutations (3 rounds)
+            
+            **Main Sequence (30 minutes):**
+            • Downward Dog
+            • Warrior I, II, III
+            • Tree Pose
+            • Bridge Pose
+            • Cobra Pose
+            • Seated Forward Bend
+            
+            **Closing (5 minutes):**
+            • Corpse Pose (Savasana)
+            • Meditation (optional)
+            
+            **Benefits**: Improved flexibility, stress relief, better posture
+            
+            Would you like me to schedule this yoga session?
+            """
+        }
+        
+        // Default workout plan
+        return """
+        **Full Body Workout Plan**
+        
+        Here's a balanced full-body routine:
+        
+        **Warm-up (10 minutes):**
+        • Light cardio (5 minutes)
+        • Dynamic stretches (5 minutes)
+        
+        **Strength Training (30 minutes):**
+        • **Squats**: 3 sets × 15 reps
+        • **Push-ups**: 3 sets × 10-15 reps
+        • **Bent-over Rows**: 3 sets × 12 reps
+        • **Lunges**: 3 sets × 10 reps each leg
+        • **Plank**: 3 sets × 45 seconds
+        
+        **Cardio (15 minutes):**
+        • Choose: Running, cycling, or swimming
+        
+        **Cool-down (5 minutes):**
+        • Static stretches
+        • Deep breathing
+        
+        **Total Time**: 60 minutes
+        **Calories Burned**: ~400-600
+        
+        Would you like me to schedule this workout or create a more specific plan based on your goals?
+        """
+    }
+    
+    private func handleScheduling(_ userMessage: String) -> String {
+        if let (date, time) = parseDateAndTime(userMessage) {
+            // Schedule the workout
+            scheduleWorkout?(date, time, "Workout Session")
+            
+            let formatter = DateFormatter()
+            formatter.dateStyle = .medium
+            formatter.timeStyle = .short
+            
+            return """
+            ✅ **Workout Scheduled!**
+            
+            I've scheduled your workout for:
+            **Date**: \(formatter.string(from: date))
+            **Time**: \(time)
+            
+            You'll receive a reminder before your session. Would you like me to create a specific workout plan for this session?
+            """
+        }
         
         return """
-        Age: \(profile.age)
-        Weight: \(profile.weight) kg
-        Height: \(profile.height) cm
-        Fitness Level: \(profile.fitnessLevel)
-        Goals: \(profile.goals.joined(separator: ", "))
-        Equipment: \(profile.equipment.joined(separator: ", "))
+        **Schedule a Workout**
+        
+        I can help you schedule a workout! When would you like to train?
+        
+        **Quick Options:**
+        • "Schedule for tomorrow at 9 AM"
+        • "Book a session on Monday at 6 PM"
+        • "Schedule today at 5 PM"
+        
+        Just let me know the day and time, and I'll add it to your calendar!
+        """
+    }
+    
+    private func handleProfileUpdate(_ userMessage: String) -> String {
+        // Update profile based on message
+        updateProfile?(userMessage)
+        
+        return """
+        ✅ **Profile Updated!**
+        
+        I've updated your fitness profile based on your message. Your changes have been saved.
+        
+        Would you like me to:
+        • Review your updated profile
+        • Create a workout plan based on your new goals
+        • Schedule your next training session
+        """
+    }
+    
+    private func generateNutritionAdvice(_ userMessage: String) -> String {
+        return """
+        **Nutrition Tips for Your Fitness Goals**
+        
+        Here are some key nutrition principles:
+        
+        **Protein**: Aim for 0.8-1.2g per pound of body weight
+        **Carbs**: 45-65% of daily calories for energy
+        **Fats**: 20-35% of daily calories for hormone health
+        
+        **Meal Timing:**
+        • **Pre-workout**: Light meal 2-3 hours before
+        • **Post-workout**: Protein + carbs within 30 minutes
+        • **Hydration**: 8-12 cups of water daily
+        
+        **Healthy Food Choices:**
+        • Lean proteins: chicken, fish, eggs, tofu
+        • Complex carbs: oats, brown rice, sweet potatoes
+        • Healthy fats: avocados, nuts, olive oil
+        • Vegetables: aim for 5+ servings daily
+        
+        Would you like me to create a meal plan or help with specific nutrition questions?
         """
     }
     
