@@ -12,11 +12,6 @@ class GeminiService: ObservableObject {
     private var calendarManager: CalendarManager?
     private var workoutPlanManager: WorkoutPlanManager?
     
-    // Conversation memory and context
-    private var conversationContext: [String] = []
-    private var userProfile: [String: Any] = [:]
-    private var currentWorkoutPlan: String = ""
-    
     // Helper closures for external actions
     var scheduleWorkout: ((Date, String, String) -> Void)?
     var updateProfile: ((String) -> Void)?
@@ -30,75 +25,32 @@ class GeminiService: ObservableObject {
         )
         
         self.messages = [welcomeMessage]
-        self.conversationContext = []
-        self.userProfile = [:]
-        self.currentWorkoutPlan = ""
     }
     
     func configure(profileManager: ProfileManager, calendarManager: CalendarManager, workoutPlanManager: WorkoutPlanManager) {
         self.profileManager = profileManager
         self.calendarManager = calendarManager
         self.workoutPlanManager = workoutPlanManager
-        
-        // Initialize user profile context
-        updateUserProfileContext()
     }
     
-    private func updateUserProfileContext() {
-        guard let profile = profileManager else { return }
-        
-        userProfile = [
-            "age": profile.age,
-            "weight": profile.weight,
-            "height": profile.height,
-            "fitnessLevel": profile.fitnessLevel,
-            "goals": profile.goals.joined(separator: ", "),
-            "equipment": profile.equipment.joined(separator: ", ")
-        ]
-    }
-    
-    func sendMessage(_ message: String) async -> String {
+    func sendMessage(_ message: String) async {
         await MainActor.run {
             self.isProcessing = true
         }
         
-        // Add user message to conversation on main thread
+        // Add user message to conversation
         await MainActor.run {
             self.messages.append(ChatMessage(content: message, isFromUser: true, timestamp: Date()))
         }
         
-        // Update conversation context
-        conversationContext.append("User: \(message)")
+        // Generate conversational response
+        let response = await generateConversationalResponse(message)
         
-        // Classify intent with context
-        let intent = classifyIntent(message, context: conversationContext)
-        
-        // Generate response based on intent with full context
-        let response = await generateResponse(for: intent, userMessage: message, context: conversationContext)
-        
-        // TECHNICAL HOT-FIX: Ensure we never have blank responses
-        let replyText: String
-        let trimmed = response.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
-            replyText = trimmed
-        } else {
-            replyText = "⚠️ I'm having trouble generating that. Could you rephrase?"
-        }
-        
-        // Add assistant response to conversation context
-        conversationContext.append("Assistant: \(replyText)")
-        
-        // Add assistant response to conversation on main thread
+        // Add assistant response
         await MainActor.run {
-            self.messages.append(ChatMessage(content: replyText, isFromUser: false, timestamp: Date()))
+            self.messages.append(ChatMessage(content: response, isFromUser: false, timestamp: Date()))
             
-            // Trim conversation to last 20 turns to maintain context without performance issues
-            if self.conversationContext.count > 20 {
-                let suffixCount = min(20, self.conversationContext.count)
-                self.conversationContext = Array(self.conversationContext.suffix(suffixCount))
-            }
-            
-            // Trim UI messages to last 50 for performance
+            // Trim messages to last 50 for performance
             if self.messages.count > 50 {
                 let welcomeMessage = self.messages.first!
                 let suffixCount = min(49, self.messages.count - 1)
@@ -107,277 +59,153 @@ class GeminiService: ObservableObject {
             
             self.isProcessing = false
         }
-        
-        return replyText
     }
     
-    private func classifyIntent(_ message: String, context: [String]) -> MessageIntent {
-        let lowercased = message.lowercased()
-        let contextString = context.joined(separator: " ").lowercased()
+    private func generateConversationalResponse(_ userMessage: String) async -> String {
+        // Build conversation context
+        let recentMessages = messages.suffix(10).map { msg in
+            "\(msg.isFromUser ? "User" : "Assistant"): \(msg.content)"
+        }.joined(separator: "\n")
         
-        // Check if we already discussed workout plans
-        let _ = contextString.contains("workout") || contextString.contains("plan") || !currentWorkoutPlan.isEmpty
+        // Get user profile info
+        let profileInfo = getUserProfileInfo()
         
-        if lowercased.contains("workout") && (lowercased.contains("plan") || lowercased.contains("routine") || lowercased.contains("split")) {
-            return .workoutPlanRequest
+        // Create the system prompt
+        let systemPrompt = """
+        You are FitBuddy, a friendly and knowledgeable AI fitness coach. You help users with:
+        
+        1. **Creating personalized workout plans** - Ask for their goals, fitness level, and equipment, then create specific plans
+        2. **Updating workout plans** - Modify existing plans based on their feedback
+        3. **Scheduling workouts** - Help them schedule sessions in their calendar
+        4. **Profile updates** - Update their age, weight, height, goals, etc.
+        5. **Fitness advice** - Answer questions about nutrition, technique, recovery, etc.
+        
+        **User Profile:** \(profileInfo)
+        
+        **Recent Conversation:**
+        \(recentMessages)
+        
+        **Current User Message:** \(userMessage)
+        
+        **Instructions:**
+        - Be conversational and direct. Don't ask for information they've already provided.
+        - If they want a workout plan, create one immediately with specific exercises, sets, and reps.
+        - If they want to schedule something, ask for the date/time and then confirm the scheduling.
+        - If they want to update their profile, acknowledge the change and confirm it's saved.
+        - If they ask fitness questions, provide specific, actionable advice.
+        - Always be helpful and proactive. Don't revert to asking basic questions if they've already provided context.
+        
+        Respond naturally as a fitness coach would in a conversation.
+        """
+        
+        do {
+            let response = try await model.generateContent(systemPrompt)
+            let reply = response.text ?? "I'm here to help! What would you like to work on?"
+            
+            // Handle specific actions based on the response
+            await handleActions(userMessage: userMessage, response: reply)
+            
+            return reply
+        } catch {
+            return "I'm having trouble connecting right now. Let me help you with a workout plan or fitness advice. What would you like to focus on?"
         }
+    }
+    
+    private func handleActions(userMessage: String, response: String) async {
+        let lowercased = userMessage.lowercased()
         
+        // Handle scheduling requests
         if lowercased.contains("schedule") || lowercased.contains("calendar") || lowercased.contains("book") {
-            return .scheduleConfirmation
-        }
-        
-        if lowercased.contains("add") || lowercased.contains("edit") || lowercased.contains("change") || lowercased.contains("modify") {
-            return .workoutPlanEdit
-        }
-        
-        if lowercased.contains("lbs") || lowercased.contains("kg") || lowercased.contains("weight") || lowercased.contains("height") || lowercased.contains("age") {
-            return .profileUpdate
-        }
-        
-        if lowercased.contains("?") || lowercased.contains("why") || lowercased.contains("how") || lowercased.contains("what") {
-            return .generalFitnessQuestion
-        }
-        
-        return .other
-    }
-    
-    private func generateResponse(for intent: MessageIntent, userMessage: String, context: [String]) async -> String {
-        switch intent {
-        case .workoutPlanRequest:
-            return await handleWorkoutPlanRequest(userMessage, context: context)
-        case .workoutPlanEdit:
-            return await handleWorkoutPlanEdit(userMessage, context: context)
-        case .scheduleConfirmation:
-            return await handleScheduleConfirmation(userMessage, context: context)
-        case .profileUpdate:
-            return await handleProfileUpdate(userMessage, context: context)
-        case .generalFitnessQuestion:
-            return await handleGeneralFitnessQuestion(userMessage, context: context)
-        case .other:
-            return await handleGeneralQuery(userMessage, context: context)
-        }
-    }
-    
-    private func handleWorkoutPlanRequest(_ message: String, context: [String]) async -> String {
-        // Check if we already have a workout plan in context
-        if !currentWorkoutPlan.isEmpty {
-            return "I already created a workout plan for you! Here it is:\n\n\(currentWorkoutPlan)\n\nWould you like me to modify it or schedule the sessions?"
-        }
-        
-        // Check for missing profile info
-        let missingInfo = getMissingProfileInfo()
-        if !missingInfo.isEmpty {
-            return "I need a bit more info to create your perfect workout plan. \(missingInfo)"
-        }
-        
-        // Generate workout plan using Gemini with full context
-        let contextString = context.joined(separator: "\n")
-        let prompt = """
-        Conversation context:
-        \(contextString)
-        
-        User profile: \(userProfile)
-        
-        Create a personalized 3-day workout plan. The user has already provided their profile info, so don't ask for it again.
-        
-        Format as:
-        **Day 1 - [Focus]**
-        • [Exercise] — [sets]x[reps] @ [intensity] ([rest]s rest)
-        
-        Keep each day to 3-4 exercises max. Be specific with sets, reps, and rest periods.
-        """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            let plan = response.text ?? "I couldn't generate a workout plan right now."
-            
-            // Store the workout plan in context
-            currentWorkoutPlan = plan
-            
-            return plan + "\n\nWould you like me to schedule these sessions in your calendar?"
-        } catch {
-            let fallbackPlan = """
-            Here's a solid 3-day plan for you:
-            
-            **Day 1 - Upper Body**
-            • Push-ups — 3x12 @ moderate (60s rest)
-            • Dumbbell rows — 3x10 @ moderate (60s rest)
-            • Shoulder press — 3x8 @ moderate (90s rest)
-            
-            **Day 2 - Lower Body**
-            • Squats — 3x15 @ moderate (60s rest)
-            • Lunges — 3x10 each leg @ moderate (60s rest)
-            • Glute bridges — 3x12 @ moderate (45s rest)
-            
-            **Day 3 - Full Body**
-            • Burpees — 3x8 @ high intensity (90s rest)
-            • Plank — 3x30s @ moderate (45s rest)
-            • Mountain climbers — 3x20 @ moderate (60s rest)
-            """
-            
-            currentWorkoutPlan = fallbackPlan
-            return fallbackPlan + "\n\nWould you like me to schedule these sessions in your calendar?"
-        }
-    }
-    
-    private func handleWorkoutPlanEdit(_ message: String, context: [String]) async -> String {
-        let contextString = context.joined(separator: "\n")
-        let prompt = """
-        Conversation context:
-        \(contextString)
-        
-        Current workout plan:
-        \(currentWorkoutPlan)
-        
-        The user wants to modify their workout plan: "\(message)"
-        
-        Provide a specific, actionable response about how to modify their workout. Be direct and helpful. If they want to change specific exercises, provide the updated exercise with sets/reps.
-        """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            let modification = response.text ?? "I'll help you modify your workout plan. What specific changes would you like to make?"
-            
-            // Update the current workout plan if it's a substantial change
-            if modification.contains("**Day") || modification.contains("•") {
-                currentWorkoutPlan = modification
+            if let (date, time) = parseDateAndTime(userMessage) {
+                scheduleWorkout?(date, time, "Workout Session")
             }
-            
-            return modification
-        } catch {
-            return "I'll help you modify your workout plan. What specific changes would you like to make?"
+        }
+        
+        // Handle profile updates
+        if lowercased.contains("weight") || lowercased.contains("height") || lowercased.contains("age") || 
+           lowercased.contains("goal") || lowercased.contains("fitness level") {
+            updateProfile?(userMessage)
         }
     }
     
-    private func handleScheduleConfirmation(_ message: String, context: [String]) async -> String {
-        // Parse date/time and schedule
-        if let (date, time) = DateParser.parse(message) {
-            scheduleWorkout?(date, time, "Workout Session")
-            return "✅ Got it — session scheduled for \(DateFormatter.prettyDate.string(from: date)) at \(time)."
-        }
-        return "I couldn't understand the date/time. Could you try again? (e.g., 'Tuesday 7am' or 'tomorrow at 6pm')"
-    }
-    
-    private func handleProfileUpdate(_ message: String, context: [String]) async -> String {
-        // Update profile context
-        updateProfile?(message)
-        updateUserProfileContext()
+    private func getUserProfileInfo() -> String {
+        guard let profile = profileManager else { return "Profile not loaded" }
         
-        return "Profile updated successfully! I've noted your changes. Now I can create better workout plans for you."
-    }
-    
-    private func handleGeneralFitnessQuestion(_ message: String, context: [String]) async -> String {
-        let contextString = context.joined(separator: "\n")
-        let prompt = """
-        Conversation context:
-        \(contextString)
-        
-        User profile: \(userProfile)
-        
-        Answer this fitness question: "\(message)"
-        
-        Provide 3 actionable bullet points. Be direct, practical, and specific. No fluff. Use the user's profile info to personalize the advice.
+        return """
+        Age: \(profile.age)
+        Weight: \(profile.weight) kg
+        Height: \(profile.height) cm
+        Fitness Level: \(profile.fitnessLevel)
+        Goals: \(profile.goals.joined(separator: ", "))
+        Equipment: \(profile.equipment.joined(separator: ", "))
         """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            return response.text ?? "Here's what you need to know:\n• Focus on proper form first\n• Gradually increase intensity\n• Listen to your body"
-        } catch {
-            return "Here's what you need to know:\n• Focus on proper form first\n• Gradually increase intensity\n• Listen to your body"
-        }
     }
     
-    private func handleGeneralQuery(_ message: String, context: [String]) async -> String {
-        let contextString = context.joined(separator: "\n")
-        let prompt = """
-        Conversation context:
-        \(contextString)
-        
-        User profile: \(userProfile)
-        
-        The user said: "\(message)"
-        
-        You are a fitness coach. Respond proactively and helpfully. Use the conversation context to avoid repeating yourself. If they're asking for something unclear, suggest specific options like:
-        - "Want a workout plan? I can create one for you."
-        - "Need fitness advice? Ask me anything specific."
-        - "Want to update your profile? Tell me your current stats."
-        
-        Be direct and actionable. Don't ask for information they've already provided.
-        """
-        
-        do {
-            let response = try await model.generateContent(prompt)
-            return response.text ?? "I can help you with workout plans, fitness questions, or profile updates. What would you like to work on?"
-        } catch {
-            return "I can help you with workout plans, fitness questions, or profile updates. What would you like to work on?"
-        }
-    }
-    
-    private func getMissingProfileInfo() -> String {
-        guard let profile = profileManager else { return "Please complete your profile setup first." }
-        
-        var missing: [String] = []
-        if profile.age == 0 { missing.append("your age") }
-        if profile.goals.isEmpty { missing.append("your fitness goals") }
-        if profile.equipment.isEmpty { missing.append("available equipment") }
-        if profile.fitnessLevel.isEmpty { missing.append("your fitness level") }
-        
-        if missing.isEmpty { return "" }
-        
-        return "Please tell me: " + missing.joined(separator: ", ")
-    }
-}
-
-// MARK: - Supporting Types
-
-enum MessageIntent {
-    case workoutPlanRequest
-    case workoutPlanEdit
-    case scheduleConfirmation
-    case profileUpdate
-    case generalFitnessQuestion
-    case other
-}
-
-// MARK: - Date Parser Helper
-
-struct DateParser {
-    static func parse(_ text: String) -> (Date, String)? {
-        // Simple date parsing - in a real app, use a more robust parser
+    private func parseDateAndTime(_ text: String) -> (Date, String)? {
         let lowercased = text.lowercased()
         
+        // Parse common date patterns
+        var targetDate = Date()
+        var timeString = "9:00 AM"
+        
         if lowercased.contains("tomorrow") {
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            let time = extractTime(from: text) ?? "9:00 AM"
-            return (tomorrow, time)
+            targetDate = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        } else if lowercased.contains("today") {
+            targetDate = Date()
+        } else if lowercased.contains("monday") || lowercased.contains("mon") {
+            targetDate = getNextWeekday(2) // Monday = 2
+        } else if lowercased.contains("tuesday") || lowercased.contains("tue") {
+            targetDate = getNextWeekday(3) // Tuesday = 3
+        } else if lowercased.contains("wednesday") || lowercased.contains("wed") {
+            targetDate = getNextWeekday(4) // Wednesday = 4
+        } else if lowercased.contains("thursday") || lowercased.contains("thu") {
+            targetDate = getNextWeekday(5) // Thursday = 5
+        } else if lowercased.contains("friday") || lowercased.contains("fri") {
+            targetDate = getNextWeekday(6) // Friday = 6
+        } else if lowercased.contains("saturday") || lowercased.contains("sat") {
+            targetDate = getNextWeekday(7) // Saturday = 7
+        } else if lowercased.contains("sunday") || lowercased.contains("sun") {
+            targetDate = getNextWeekday(1) // Sunday = 1
         }
         
-        if lowercased.contains("today") {
-            let time = extractTime(from: text) ?? "9:00 AM"
-            return (Date(), time)
-        }
+        // Parse time
+        if lowercased.contains("6am") || lowercased.contains("6 am") { timeString = "6:00 AM" }
+        else if lowercased.contains("7am") || lowercased.contains("7 am") { timeString = "7:00 AM" }
+        else if lowercased.contains("8am") || lowercased.contains("8 am") { timeString = "8:00 AM" }
+        else if lowercased.contains("9am") || lowercased.contains("9 am") { timeString = "9:00 AM" }
+        else if lowercased.contains("10am") || lowercased.contains("10 am") { timeString = "10:00 AM" }
+        else if lowercased.contains("11am") || lowercased.contains("11 am") { timeString = "11:00 AM" }
+        else if lowercased.contains("12pm") || lowercased.contains("12 pm") || lowercased.contains("noon") { timeString = "12:00 PM" }
+        else if lowercased.contains("1pm") || lowercased.contains("1 pm") { timeString = "1:00 PM" }
+        else if lowercased.contains("2pm") || lowercased.contains("2 pm") { timeString = "2:00 PM" }
+        else if lowercased.contains("3pm") || lowercased.contains("3 pm") { timeString = "3:00 PM" }
+        else if lowercased.contains("4pm") || lowercased.contains("4 pm") { timeString = "4:00 PM" }
+        else if lowercased.contains("5pm") || lowercased.contains("5 pm") { timeString = "5:00 PM" }
+        else if lowercased.contains("6pm") || lowercased.contains("6 pm") { timeString = "6:00 PM" }
+        else if lowercased.contains("7pm") || lowercased.contains("7 pm") { timeString = "7:00 PM" }
+        else if lowercased.contains("8pm") || lowercased.contains("8 pm") { timeString = "8:00 PM" }
+        else if lowercased.contains("9pm") || lowercased.contains("9 pm") { timeString = "9:00 PM" }
+        else if lowercased.contains("10pm") || lowercased.contains("10 pm") { timeString = "10:00 PM" }
         
-        // Add more parsing logic for specific days, times, etc.
-        return nil
+        return (targetDate, timeString)
     }
     
-    private static func extractTime(from text: String) -> String? {
-        // Simple time extraction - in a real app, use regex or NLP
-        if text.contains("am") || text.contains("pm") {
-            // Extract time pattern
-            return "9:00 AM" // Placeholder
-        }
-        return nil
+    private func getNextWeekday(_ weekday: Int) -> Date {
+        let calendar = Calendar.current
+        let today = Date()
+        let todayWeekday = calendar.component(.weekday, from: today)
+        
+        let daysToAdd = (weekday - todayWeekday + 7) % 7
+        return calendar.date(byAdding: .day, value: daysToAdd, to: today) ?? today
     }
-}
-
-// MARK: - Date Formatter Extension
-
-extension DateFormatter {
-    static let prettyDate: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter
-    }()
+    
+    func clearConversation() {
+        messages = [
+            ChatMessage(
+                content: "Hey! I'm your FitBuddy coach. I can help you with workout plans, answer fitness questions, and keep track of your progress. What would you like to work on today?",
+                isFromUser: false,
+                timestamp: Date()
+            )
+        ]
+    }
 } 

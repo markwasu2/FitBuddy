@@ -1283,13 +1283,6 @@ struct AICoachView: View {
     private func sendMessage() {
         guard !messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         
-        let userMessage = ChatMessage(
-            content: messageText,
-            isFromUser: true,
-            timestamp: Date()
-        )
-        
-        geminiService.messages.append(userMessage)
         let messageToSend = messageText
         messageText = ""
         

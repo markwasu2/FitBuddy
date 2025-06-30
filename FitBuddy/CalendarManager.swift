@@ -9,4 +9,14 @@ class CalendarManager: ObservableObject {
         events.append(event)
         print("Scheduled: \(event)")
     }
+}
+
+// MARK: - Date Formatter Extension
+extension DateFormatter {
+    static let prettyDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
 } 
