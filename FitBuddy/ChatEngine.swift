@@ -232,7 +232,7 @@ class ChatEngine: ObservableObject {
     
     func sendMessage(_ message: String) {
         Task {
-            let response = await geminiService.sendMessage(message)
+            _ = await geminiService.sendMessage(message)
             // Response is already added to geminiService.messages
         }
     }

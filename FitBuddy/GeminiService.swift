@@ -29,7 +29,10 @@ class GeminiService: ObservableObject {
             timestamp: Date()
         )
         
-        self.messages.append(welcomeMessage)
+        self.messages = [welcomeMessage]
+        self.conversationContext = []
+        self.userProfile = [:]
+        self.currentWorkoutPlan = ""
     }
     
     func configure(profileManager: ProfileManager, calendarManager: CalendarManager, workoutPlanManager: WorkoutPlanManager) {
@@ -91,13 +94,15 @@ class GeminiService: ObservableObject {
             
             // Trim conversation to last 20 turns to maintain context without performance issues
             if self.conversationContext.count > 20 {
-                self.conversationContext = Array(self.conversationContext.suffix(20))
+                let suffixCount = min(20, self.conversationContext.count)
+                self.conversationContext = Array(self.conversationContext.suffix(suffixCount))
             }
             
             // Trim UI messages to last 50 for performance
             if self.messages.count > 50 {
                 let welcomeMessage = self.messages.first!
-                self.messages = [welcomeMessage] + self.messages.suffix(49)
+                let suffixCount = min(49, self.messages.count - 1)
+                self.messages = [welcomeMessage] + self.messages.suffix(suffixCount)
             }
             
             self.isProcessing = false
@@ -110,11 +115,8 @@ class GeminiService: ObservableObject {
         let lowercased = message.lowercased()
         let contextString = context.joined(separator: " ").lowercased()
         
-        // Check if we already have profile info in context
-        let hasProfileInfo = !userProfile.isEmpty && userProfile["age"] as? Int != 0
-        
         // Check if we already discussed workout plans
-        let hasWorkoutContext = contextString.contains("workout") || contextString.contains("plan") || !currentWorkoutPlan.isEmpty
+        let _ = contextString.contains("workout") || contextString.contains("plan") || !currentWorkoutPlan.isEmpty
         
         if lowercased.contains("workout") && (lowercased.contains("plan") || lowercased.contains("routine") || lowercased.contains("split")) {
             return .workoutPlanRequest

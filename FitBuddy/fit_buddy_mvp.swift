@@ -71,7 +71,7 @@ struct FitBuddyApp: App {
     
     var body: some Scene {
         WindowGroup {
-            MainTabView()
+            RootView()
                 .environment(\.managedObjectContext, persistenceController.container.viewContext)
                 .environmentObject(profileManager)
                 .environmentObject(geminiService)
@@ -94,18 +94,15 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 // MARK: - Root Navigation
 struct RootView: View {
     @EnvironmentObject var profileManager: ProfileManager
+    @EnvironmentObject var geminiService: GeminiService
+    @EnvironmentObject var calendarManager: CalendarManager
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
     
     var body: some View {
         if profileManager.isOnboardingComplete {
             MainTabView()
         } else {
             OnboardingView()
-                .environmentObject(profileManager)
-                .environmentObject(workoutPlanManager)
-                .environmentObject(healthKitManager)
-                .environmentObject(notificationManager)
-                .environmentObject(calendarManager)
-                .environmentObject(geminiService)
                 .preferredColorScheme(.dark)
                 .onAppear {
                     configureGeminiService()
@@ -121,7 +118,7 @@ struct RootView: View {
         )
         
         // Set up helper closures
-        geminiService.scheduleWorkout = { date, time, title in
+        geminiService.scheduleWorkout = { (date: Date, time: String, title: String) in
             // Schedule workout in calendar
             calendarManager.addEvent(title: title, date: date, time: time)
         }
@@ -271,7 +268,8 @@ class ActivityTracker: ObservableObject {
     func addActivity(_ activity: ActivityItem) {
         recentActivity.insert(activity, at: 0)
         if recentActivity.count > 10 {
-            recentActivity = Array(recentActivity.prefix(10))
+            let prefixCount = min(10, recentActivity.count)
+            recentActivity = Array(recentActivity.prefix(prefixCount))
         }
         saveData()
     }
@@ -313,7 +311,8 @@ class ChatMemoryManager: ObservableObject {
     func addMessage(_ message: ChatMessage) {
         chatHistory.append(message)
         if chatHistory.count > 100 {
-            chatHistory = Array(chatHistory.suffix(100))
+            let suffixCount = min(100, chatHistory.count)
+            chatHistory = Array(chatHistory.suffix(suffixCount))
         }
     }
     
@@ -1174,7 +1173,7 @@ struct AICoachView: View {
                         .padding(.top, 20)
                         .padding(.bottom, 100) // Extra padding for input and tab bar
                     }
-                    .onChange(of: geminiService.messages.count) { _ in
+                    .onChange(of: geminiService.messages.count) { oldValue, newValue in
                         withAnimation(.easeOut(duration: 0.3)) {
                             proxy.scrollTo(geminiService.messages.last?.id, anchor: .bottom)
                         }

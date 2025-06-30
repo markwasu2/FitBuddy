@@ -299,14 +299,13 @@ struct EditProfileView: View {
             heightInInches = feet * 12 + inches
         }
         
-        // Convert intensity to fitness level
-        let fitnessLevel: String
+        // Convert intensity to fitness level (handled by ProfileManager)
         switch intensity {
-        case 1...3: fitnessLevel = "Beginner"
-        case 4...6: fitnessLevel = "Intermediate"
-        case 7...8: fitnessLevel = "Advanced"
-        case 9...10: fitnessLevel = "Elite"
-        default: fitnessLevel = "Intermediate"
+        case 1...3: break
+        case 4...6: break
+        case 7...8: break
+        case 9...10: break
+        default: break
         }
         
         profileManager.update(
