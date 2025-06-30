@@ -131,28 +131,6 @@ struct RootView: View {
         } else {
             OnboardingView()
                 .preferredColorScheme(.light)
-                .onAppear {
-                    configureGeminiService()
-                }
-        }
-    }
-    
-    private func configureGeminiService() {
-        geminiService.configure(
-            profileManager: profileManager,
-            calendarManager: calendarManager,
-            workoutPlanManager: workoutPlanManager
-        )
-        
-        // Set up helper closures
-        geminiService.scheduleWorkout = { (date: Date, time: String, title: String) in
-            // Schedule workout in calendar
-            calendarManager.addEvent(title: title, date: date, time: time)
-        }
-        
-        geminiService.updateProfile = { text in
-            // Update profile from chat
-            profileManager.updateProfile(text)
         }
     }
 }
@@ -747,6 +725,7 @@ struct MainTabView: View {
 struct DashboardView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @EnvironmentObject var calendarManager: CalendarManager
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var workoutJournal: WorkoutJournal
     @State private var showingQuickActions = false
@@ -777,7 +756,7 @@ struct DashboardView: View {
             .navigationBarHidden(true)
             .sheet(isPresented: $showStartWorkout) {
                 StartWorkoutSheet()
-                    .environmentObject(workoutPlanManager)
+                    .environmentObject(calendarManager)
             }
             .sheet(isPresented: $showLogActivity) {
                 LogActivitySheet()
@@ -875,38 +854,86 @@ struct DashboardView: View {
     }
     
     private var currentActivitySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Current Activity")
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.white)
-            
-            VStack(spacing: 12) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Today's Goal")
-                            .font(.subheadline)
-                            .foregroundColor(Color(hex: "#9CA3AF"))
+        return VStack(alignment: .leading, spacing: 24) {
+            // Current Activity
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Current Activity")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.white)
+                
+                VStack(spacing: 12) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Today's Goal")
+                                .font(.subheadline)
+                                .foregroundColor(Color(hex: "#9CA3AF"))
+                            
+                            Text("45 minutes")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.white)
+                        }
                         
-                        Text("45 minutes")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
+                        Spacer()
+                        
+                        CircularProgressView(progress: 0.7, size: 60)
                     }
+                    
+                    HStack(spacing: 16) {
+                        StatCard(title: "Steps", value: "8,432", subtitle: "Goal: 10,000")
+                        StatCard(title: "Calories", value: "1,247", subtitle: "Goal: 2,000")
+                    }
+                }
+                .padding(20)
+                .background(Color(hex: "#1C1C2E"))
+                .cornerRadius(16)
+            }
+            
+            // Scheduled Workouts Section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("Scheduled Workouts")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.textPrimary)
                     
                     Spacer()
                     
-                    CircularProgressView(progress: 0.7, size: 60)
+                    if !calendarManager.getUpcomingWorkouts().isEmpty {
+                        Text("\(calendarManager.getUpcomingWorkouts().count) upcoming")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                    }
                 }
                 
-                HStack(spacing: 16) {
-                    StatCard(title: "Steps", value: "8,432", subtitle: "Goal: 10,000")
-                    StatCard(title: "Calories", value: "1,247", subtitle: "Goal: 2,000")
+                if calendarManager.getUpcomingWorkouts().isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "calendar.badge.plus")
+                            .font(.system(size: 32))
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text("No scheduled workouts")
+                            .font(.subheadline)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text("Schedule a workout with your AI Coach!")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(20)
+                    .background(Color.white)
+                    .cornerRadius(12)
+                } else {
+                    VStack(spacing: 8) {
+                        ForEach(calendarManager.getUpcomingWorkouts().prefix(3), id: \.id) { workout in
+                            ScheduledWorkoutCard(workout: workout)
+                        }
+                    }
                 }
             }
-            .padding(20)
-            .background(Color(hex: "#1C1C2E"))
-            .cornerRadius(16)
         }
     }
     
@@ -1081,6 +1108,51 @@ struct ActivityJournalCard: View {
             Text(activity.date, style: .date)
                 .font(.caption)
                 .foregroundColor(Color.textSecondary)
+        }
+        .padding(16)
+        .background(Color.white)
+        .cornerRadius(12)
+    }
+}
+
+// MARK: - Scheduled Workout Card
+struct ScheduledWorkoutCard: View {
+    let workout: CalendarEvent
+    
+    var body: some View {
+        HStack(spacing: 16) {
+            Circle()
+                .fill(Color.ctaYellow)
+                .frame(width: 40, height: 40)
+                .overlay(
+                    Image(systemName: "calendar.badge.clock")
+                        .foregroundColor(.white)
+                        .font(.system(size: 16, weight: .medium))
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(workout.title)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color.textPrimary)
+                
+                Text(workout.formattedDate)
+                    .font(.subheadline)
+                    .foregroundColor(Color.textSecondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(workout.time)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color.primaryCoral)
+                
+                Text("Scheduled")
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
+            }
         }
         .padding(16)
         .background(Color.white)
@@ -1712,7 +1784,7 @@ struct CalendarView: View {
             } else {
                 VStack(spacing: 12) {
                     ForEach(workoutsForSelectedDate, id: \.id) { workout in
-                        ScheduledWorkoutCard(workout: workout)
+                        ActivityJournalCard(activity: workout)
                     }
                 }
             }
@@ -1818,7 +1890,7 @@ struct CalendarView: View {
                 calories: 320
             ),
             WorkoutEntry(
-                date: Date().addingTimeInterval(86400),
+                date: Date().addingTimeInterval(-86400),
                 exercises: [],
                 type: "Cardio",
                 duration: 30,
@@ -1827,7 +1899,7 @@ struct CalendarView: View {
                 calories: 280
             ),
             WorkoutEntry(
-                date: Date().addingTimeInterval(172800),
+                date: Date().addingTimeInterval(-172800),
                 exercises: [],
                 type: "Yoga",
                 duration: 60,
@@ -1894,44 +1966,6 @@ struct WeeklyStatCard: View {
                 .font(.title)
                 .fontWeight(.bold)
                 .foregroundColor(Color.textPrimary)
-        }
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(12)
-    }
-}
-
-// MARK: - Scheduled Workout Card
-struct ScheduledWorkoutCard: View {
-    let workout: WorkoutEntry
-    
-    var body: some View {
-        HStack(spacing: 16) {
-            Circle()
-                .fill(Color.primaryCoral)
-                .frame(width: 40, height: 40)
-                .overlay(
-                    Image(systemName: "dumbbell.fill")
-                        .foregroundColor(.white)
-                        .font(.system(size: 16, weight: .medium))
-                )
-            
-            VStack(alignment: .leading, spacing: 4) {
-                Text(workout.type)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(Color.textPrimary)
-                
-                Text("\(workout.duration) min")
-                    .font(.subheadline)
-                    .foregroundColor(Color.textSecondary)
-            }
-            
-            Spacer()
-            
-            Text(workout.date, style: .date)
-                .font(.caption)
-                .foregroundColor(Color.textSecondary)
         }
         .padding(16)
         .background(Color.white)
@@ -2378,19 +2412,55 @@ struct DetailedActivityCard: View {
 
 // MARK: - Start Workout Sheet
 struct StartWorkoutSheet: View {
-    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @EnvironmentObject var calendarManager: CalendarManager
     @Environment(\.dismiss) var dismiss
     var body: some View {
         NavigationView {
-            List {
-                ForEach(workoutPlanManager.plans, id: \.id) { plan in
-                    Button(action: {
-                        // TODO: Start/log this workout
-                        dismiss()
-                    }) {
-                        VStack(alignment: .leading) {
-                            Text(plan.title)
-                            Text(plan.description).font(.subheadline).foregroundColor(.secondary)
+            VStack {
+                if calendarManager.workoutPlans.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "dumbbell")
+                            .font(.system(size: 48))
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text("No Workout Plans Yet")
+                            .font(.headline)
+                            .foregroundColor(Color.textPrimary)
+                        
+                        Text("Create a workout plan with your AI Coach first!")
+                            .font(.subheadline)
+                            .foregroundColor(Color.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.bgPrimary)
+                } else {
+                    List {
+                        ForEach(calendarManager.workoutPlans, id: \.id) { plan in
+                            Button(action: {
+                                // TODO: Start/log this workout
+                                dismiss()
+                            }) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(plan.title)
+                                        .font(.headline)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(Color.textPrimary)
+                                    
+                                    Text(plan.description)
+                                        .font(.subheadline)
+                                        .foregroundColor(Color.textSecondary)
+                                    
+                                    HStack {
+                                        Label("\(plan.duration) min", systemImage: "clock")
+                                        Spacer()
+                                        Label(plan.difficulty, systemImage: "speedometer")
+                                    }
+                                    .font(.caption)
+                                    .foregroundColor(Color.textSecondary)
+                                }
+                                .padding(.vertical, 4)
+                            }
                         }
                     }
                 }
