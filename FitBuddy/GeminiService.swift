@@ -99,7 +99,15 @@ class GeminiService: ObservableObject {
         """
         
         do {
-            let response = try await model.generateContent(systemPrompt)
+            // Add timeout to prevent hanging
+            let task = Task {
+                try await model.generateContent(systemPrompt)
+            }
+            
+            let response = try await withTimeout(seconds: 10) {
+                try await task.value
+            }
+            
             let reply = response.text ?? "I'm here to help! What would you like to work on?"
             
             // Handle specific actions based on the response
@@ -107,9 +115,29 @@ class GeminiService: ObservableObject {
             
             return reply
         } catch {
+            print("Gemini API Error: \(error)")
             return "I'm having trouble connecting right now. Let me help you with a workout plan or fitness advice. What would you like to focus on?"
         }
     }
+    
+    private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T.self) { group in
+            group.addTask {
+                try await operation()
+            }
+            
+            group.addTask {
+                try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+                throw TimeoutError()
+            }
+            
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
+        }
+    }
+    
+    private struct TimeoutError: Error {}
     
     private func handleActions(userMessage: String, response: String) async {
         let lowercased = userMessage.lowercased()
