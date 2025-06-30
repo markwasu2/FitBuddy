@@ -697,6 +697,16 @@ struct MainTabView: View {
         }
         .accentColor(Color(hex: "#7C3AED"))
         .preferredColorScheme(.dark)
+        .onAppear {
+            // Ensure we start with a valid tab
+            selectedTab = 0
+        }
+        .onChange(of: selectedTab) { oldValue, newValue in
+            // Add safety check for tab changes
+            if newValue < 0 || newValue > 4 {
+                selectedTab = 0
+            }
+        }
     }
 }
 
@@ -913,7 +923,9 @@ struct DashboardView: View {
             }
             
             VStack(spacing: 12) {
-                ForEach(sampleActivities.prefix(3), id: \.id) { activity in
+                let activities = sampleActivities
+                let displayCount = min(3, activities.count)
+                ForEach(Array(activities.prefix(displayCount).enumerated()), id: \.element.id) { index, activity in
                     ActivityJournalCard(activity: activity)
                 }
             }
@@ -2095,15 +2107,221 @@ struct BiometricCard: View {
 
 // MARK: - Activities View (Stub)
 struct ActivitiesView: View {
+    @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
+    @State private var selectedFilter = "All"
+    @State private var showingAddActivity = false
+    
+    private let filters = ["All", "Strength", "Cardio", "Flexibility", "Sports"]
+    
     var body: some View {
-        VStack {
-            Spacer()
-            Text("Activities coming soon...")
-                .foregroundColor(.gray)
-                .font(.title2)
-            Spacer()
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Activity Summary
+                    activitySummarySection
+                    
+                    // Filter Tabs
+                    filterTabsSection
+                    
+                    // Activity List
+                    activityListSection
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 100) // Extra padding for tab bar
+            }
+            .background(Color(hex: "#0D0D1A"))
+            .navigationTitle("Activities")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddActivity = true }) {
+                        Image(systemName: "plus")
+                            .foregroundColor(Color(hex: "#7C3AED"))
+                    }
+                }
+            }
         }
-        .background(Color(hex: "#0D0D1A").ignoresSafeArea())
+        .sheet(isPresented: $showingAddActivity) {
+            AddActivityView()
+        }
+    }
+    
+    private var activitySummarySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("This Week")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 2), spacing: 12) {
+                SummaryCard(
+                    title: "Workouts",
+                    value: "5",
+                    icon: "dumbbell.fill"
+                )
+                
+                SummaryCard(
+                    title: "Calories",
+                    value: "2,450",
+                    icon: "flame.fill"
+                )
+                
+                SummaryCard(
+                    title: "Time",
+                    value: "4.5h",
+                    icon: "clock.fill"
+                )
+                
+                SummaryCard(
+                    title: "Streak",
+                    value: "7 days",
+                    icon: "flame.fill"
+                )
+            }
+        }
+    }
+    
+    private var filterTabsSection: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 12) {
+                ForEach(filters, id: \.self) { filter in
+                    SelectableChip(
+                        title: filter,
+                        isSelected: selectedFilter == filter
+                    ) {
+                        selectedFilter = filter
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+    
+    private var activityListSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Recent Activities")
+                .font(.headline)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            
+            VStack(spacing: 12) {
+                ForEach(sampleActivities, id: \.id) { activity in
+                    DetailedActivityCard(activity: activity)
+                }
+            }
+        }
+    }
+    
+    private var sampleActivities: [WorkoutEntry] {
+        [
+            WorkoutEntry(
+                date: Date(),
+                exercises: [],
+                type: "Strength Training",
+                duration: 45,
+                mood: "Great",
+                difficulty: "Medium",
+                calories: 320
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(-86400),
+                exercises: [],
+                type: "Cardio",
+                duration: 30,
+                mood: "Good",
+                difficulty: "Easy",
+                calories: 280
+            ),
+            WorkoutEntry(
+                date: Date().addingTimeInterval(-172800),
+                exercises: [],
+                type: "Yoga",
+                duration: 60,
+                mood: "Excellent",
+                difficulty: "Easy",
+                calories: 180
+            )
+        ]
+    }
+}
+
+// MARK: - Add Activity View
+struct AddActivityView: View {
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationView {
+            VStack {
+                Text("Add Activity")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.white)
+                
+                Text("Coming soon...")
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(hex: "#0D0D1A"))
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarItems(trailing: Button("Done") { dismiss() })
+        }
+    }
+}
+
+// MARK: - Detailed Activity Card
+struct DetailedActivityCard: View {
+    let activity: WorkoutEntry
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Circle()
+                    .fill(Color(hex: "#7C3AED"))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Image(systemName: "dumbbell.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size: 16, weight: .medium))
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(activity.type)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Text("\(activity.duration) min • \(activity.exercises.count) exercises")
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text("\(activity.calories) cal")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.white)
+                    
+                    Text(activity.date, style: .date)
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "#9CA3AF"))
+                }
+            }
+            
+            HStack(spacing: 16) {
+                Label(activity.mood, systemImage: "face.smiling")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+                
+                Label(activity.difficulty, systemImage: "speedometer")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "#9CA3AF"))
+            }
+        }
+        .padding(16)
+        .background(Color(hex: "#1C1C2E"))
+        .cornerRadius(12)
     }
 }
 
