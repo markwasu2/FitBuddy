@@ -75,6 +75,11 @@ class GeminiService: ObservableObject {
             return handleSchedulingResponse(userMessage)
         }
         
+        // Check for emotional/mental health concerns first
+        if isEmotionalSupport(lowercased) {
+            return provideEmotionalSupport(userMessage)
+        }
+        
         // Check if this is off-topic and redirect to fitness
         if isOffTopic(lowercased) {
             return """
@@ -85,6 +90,7 @@ class GeminiService: ObservableObject {
             • **Scheduling** - Book workout sessions in your calendar  
             • **Profile Updates** - Update your fitness goals and stats
             • **Nutrition Advice** - Get healthy eating tips
+            • **Mental Wellness** - Support for motivation and emotional health
             • **Fitness Questions** - Answer exercise and health questions
             
             What would you like to work on today?
@@ -109,12 +115,26 @@ class GeminiService: ObservableObject {
             return generateNutritionAdvice(userMessage)
         }
         
+        if lowercased.contains("motivation") || lowercased.contains("tired") || lowercased.contains("lazy") ||
+           lowercased.contains("don't feel like") || lowercased.contains("can't") || lowercased.contains("hard") {
+            return provideMotivation(userMessage)
+        }
+        
+        if lowercased.contains("stress") || lowercased.contains("anxiety") || lowercased.contains("overwhelmed") ||
+           lowercased.contains("depressed") || lowercased.contains("sad") || lowercased.contains("down") {
+            return provideStressRelief(userMessage)
+        }
+        
+        if lowercased.contains("sleep") || lowercased.contains("rest") || lowercased.contains("recovery") {
+            return provideRecoveryAdvice(userMessage)
+        }
+        
         if lowercased.contains("hello") || lowercased.contains("hi") || lowercased.contains("hey") {
-            return "Hello! I'm your FitBuddy coach. I can help you with:\n\n• **Workout Plans** - Create personalized exercise routines\n• **Scheduling** - Book workout sessions in your calendar\n• **Profile Updates** - Update your fitness goals and stats\n• **Nutrition Advice** - Get healthy eating tips\n\nWhat would you like to work on today?"
+            return "Hello! I'm your FitBuddy coach. I can help you with:\n\n• **Workout Plans** - Create personalized exercise routines\n• **Scheduling** - Book workout sessions in your calendar\n• **Profile Updates** - Update your fitness goals and stats\n• **Nutrition Advice** - Get healthy eating tips\n• **Mental Wellness** - Support for motivation and emotional health\n\nWhat would you like to work on today?"
         }
         
         // Default helpful response for fitness-related questions
-        return "I'm here to help with your fitness journey! I can assist with:\n\n• Creating personalized workout plans\n• Scheduling training sessions\n• Updating your fitness profile\n• Providing nutrition advice\n• Answering fitness questions\n\nJust let me know what you'd like to focus on!"
+        return "I'm here to help with your fitness journey! I can assist with:\n\n• Creating personalized workout plans\n• Scheduling training sessions\n• Updating your fitness profile\n• Providing nutrition advice\n• Supporting your mental wellness and motivation\n• Answering fitness questions\n\nJust let me know what you'd like to focus on!"
     }
     
     private func isRespondingToSchedulingQuestion(_ message: String) -> Bool {
@@ -960,5 +980,365 @@ class GeminiService: ObservableObject {
         
         Would you like me to create a meal plan or help with specific nutrition questions?
         """
+    }
+    
+    private func provideEmotionalSupport(_ userMessage: String) -> String {
+        let lowercased = userMessage.lowercased()
+        
+        if lowercased.contains("sad") || lowercased.contains("depressed") || lowercased.contains("down") {
+            return """
+            💙 **I hear you, and it's okay to feel this way.**
+            
+            Your feelings are valid, and taking care of yourself right now is the most important thing. Here are some gentle ways to support yourself:
+            
+            **Gentle Movement Options:**
+            • Take a slow, mindful walk outside (even 5 minutes helps)
+            • Try some gentle stretching or yoga
+            • Dance to your favorite music in your room
+            
+            **Self-Care Ideas:**
+            • Take a warm bath or shower
+            • Listen to calming music
+            • Write down your thoughts in a journal
+            • Call a friend or family member
+            
+            **Remember:** Exercise releases endorphins that can help improve your mood, but it's also perfectly okay to rest when you need it. Start with something small - even just standing up and stretching counts as movement.
+            
+            Would you like me to create a very gentle, mood-boosting workout, or would you prefer to talk about something else?
+            """
+        }
+        
+        if lowercased.contains("anxious") || lowercased.contains("stressed") || lowercased.contains("worried") {
+            return """
+            🌸 **I understand anxiety can be really overwhelming.**
+            
+            Let's focus on some calming techniques that can help:
+            
+            **Immediate Calming Exercises:**
+            • **4-7-8 Breathing**: Inhale for 4, hold for 7, exhale for 8
+            • **Progressive Muscle Relaxation**: Tense and release each muscle group
+            • **5-4-3-2-1 Grounding**: Name 5 things you see, 4 you feel, 3 you hear, 2 you smell, 1 you taste
+            
+            **Gentle Movement for Anxiety:**
+            • Slow, mindful walking
+            • Gentle yoga or stretching
+            • Tai chi movements
+            • Swimming (if available)
+            
+            **Remember:** Exercise can be a powerful tool for managing anxiety, but it's important to start gently. Even 10 minutes of movement can help reduce stress hormones.
+            
+            Would you like me to create a calming, low-intensity workout designed specifically for stress relief?
+            """
+        }
+        
+        if lowercased.contains("tired") || lowercased.contains("exhausted") || lowercased.contains("no energy") {
+            return """
+            😴 **It sounds like you're really tired, and that's completely normal.**
+            
+            Sometimes our bodies need rest more than they need intense exercise. Here are some options:
+            
+            **If You Want Gentle Movement:**
+            • Light stretching while sitting or lying down
+            • Slow walking around your home
+            • Gentle chair exercises
+            • Deep breathing exercises
+            
+            **If You Need Rest:**
+            • Listen to your body - rest is just as important as exercise
+            • Focus on good sleep hygiene
+            • Stay hydrated and eat nourishing foods
+            • Be kind to yourself - you don't have to push through exhaustion
+            
+            **Remember:** Rest days are essential for progress. Your body needs time to recover and rebuild.
+            
+            Would you like me to create a very gentle, energy-conserving routine, or would you prefer to focus on recovery strategies?
+            """
+        }
+        
+        if lowercased.contains("can't") || lowercased.contains("don't want to") || lowercased.contains("give up") {
+            return """
+            🤗 **I want you to know that it's okay to feel this way.**
+            
+            Everyone has moments when they feel like they can't or don't want to continue. This doesn't mean you've failed - it means you're human.
+            
+            **Let's take a step back:**
+            • What's making you feel this way right now?
+            • Are you being too hard on yourself?
+            • Maybe we need to adjust your approach?
+            
+            **Remember:** Fitness is a journey, not a destination. It's okay to:
+            • Take breaks when you need them
+            • Adjust your goals to be more realistic
+            • Start small and build gradually
+            • Celebrate every small step forward
+            
+            **Small Wins Count:**
+            • Standing up and stretching
+            • Taking a short walk
+            • Drinking water
+            • Getting enough sleep
+            
+            Would you like to talk about what's challenging you, or should we create a much simpler, more achievable plan?
+            """
+        }
+        
+        // Default emotional support response
+        return """
+        💝 **I'm here for you, and I want you to know that your feelings matter.**
+        
+        Sometimes the hardest part of fitness isn't the physical work - it's dealing with our emotions, stress, and mental health. You're not alone in this.
+        
+        **What I can help with:**
+        • Creating gentle, mood-boosting workouts
+        • Suggesting stress-relief exercises
+        • Adjusting plans to fit your current energy and mood
+        • Supporting you through difficult times
+        
+        **Remember:** Your mental health is just as important as your physical health. It's okay to prioritize feeling better emotionally.
+        
+        What would be most helpful for you right now? We can take this at your own pace.
+        """
+    }
+    
+    private func provideMotivation(_ userMessage: String) -> String {
+        let lowercased = userMessage.lowercased()
+        
+        if lowercased.contains("lazy") || lowercased.contains("no motivation") {
+            return """
+            💪 **Hey, let's reframe this!**
+            
+            What you're calling "lazy" might actually be:
+            • Your body asking for rest
+            • Burnout from pushing too hard
+            • Needing a different approach
+            • Simply having an off day (which is totally normal!)
+            
+            **Instead of "lazy," let's think:**
+            • "I'm conserving energy"
+            • "I'm listening to my body"
+            • "I'm taking care of myself"
+            
+            **Motivation Tips:**
+            • Start with just 5 minutes - you can always do more
+            • Put on your favorite upbeat music
+            • Change into workout clothes (even if you don't feel like it)
+            • Remember why you started this journey
+            
+            **Remember:** Motivation follows action, not the other way around. The hardest part is often just starting.
+            
+            Want to try a super short, fun workout that might get you moving?
+            """
+        }
+        
+        if lowercased.contains("tired") || lowercased.contains("don't feel like") {
+            return """
+            🌟 **I get it - sometimes we just don't feel like it.**
+            
+            But here's the thing: you don't have to feel motivated to take action. And often, once you start moving, you'll feel better.
+            
+            **Try this approach:**
+            • Tell yourself you'll just do 5 minutes
+            • Start with something you actually enjoy
+            • Focus on how you'll feel AFTER the workout
+            • Remember past workouts where you felt great afterward
+            
+            **Low-Energy Options:**
+            • Gentle yoga or stretching
+            • Walking while listening to a podcast
+            • Dancing to your favorite songs
+            • Simple bodyweight exercises
+            
+            **Remember:** Every workout you do, no matter how small, is a win. You're building consistency, and that's what matters most.
+            
+            Should we create a really enjoyable, low-effort workout that might help you get started?
+            """
+        }
+        
+        if lowercased.contains("hard") || lowercased.contains("difficult") {
+            return """
+            🎯 **You're right - fitness can be challenging, but that's also what makes it rewarding!**
+            
+            **Let's make it easier:**
+            • Break it down into smaller, manageable steps
+            • Start with what feels comfortable
+            • Celebrate every small victory
+            • Remember that progress takes time
+            
+            **Remember:** The most successful people in fitness aren't the ones who never struggle - they're the ones who keep going even when it's hard.
+            
+            **You're stronger than you think.** Every time you show up, even when it's difficult, you're building mental toughness along with physical strength.
+            
+            Would you like me to create a more manageable workout plan that builds gradually?
+            """
+        }
+        
+        // Default motivation response
+        return """
+        🚀 **Let's find your "why" and get you moving!**
+        
+        **Quick Motivation Boost:**
+        • Think about how you want to feel in 1 month, 6 months, 1 year
+        • Remember that every expert was once a beginner
+        • Focus on progress, not perfection
+        • Celebrate small wins every day
+        
+        **Remember:** You don't have to be great to start, but you have to start to be great.
+        
+        **What would help you most right now?**
+        • A super simple, 10-minute workout
+        • A fun, dance-based routine
+        • A gentle, stress-relief session
+        • Just talking about your goals
+        
+        Let's find what works for YOU!
+        """
+    }
+    
+    private func provideStressRelief(_ userMessage: String) -> String {
+        let lowercased = userMessage.lowercased()
+        
+        if lowercased.contains("stress") || lowercased.contains("overwhelmed") {
+            return """
+            🧘‍♀️ **Stress is your body's way of saying "I need attention."**
+            
+            Let's give your body and mind what they need:
+            
+            **Immediate Stress Relief:**
+            • **Deep Breathing**: 5 minutes of slow, deep breaths
+            • **Progressive Relaxation**: Tense and release each muscle group
+            • **Mindful Walking**: Focus on each step and your surroundings
+            
+            **Exercise for Stress:**
+            • **Yoga**: Gentle poses that release tension
+            • **Walking**: Especially in nature if possible
+            • **Swimming**: The water can be very calming
+            • **Tai Chi**: Slow, flowing movements
+            
+            **Remember:** Exercise is one of the most effective stress relievers because it:
+            • Reduces stress hormones
+            • Releases endorphins (natural mood boosters)
+            • Helps you sleep better
+            • Gives you a mental break
+            
+            Would you like me to create a stress-relief workout specifically designed to help you feel calmer?
+            """
+        }
+        
+        if lowercased.contains("anxiety") || lowercased.contains("worried") || lowercased.contains("nervous") {
+            return """
+            🌸 **Anxiety can feel overwhelming, but movement can be a powerful tool to help manage it.**
+            
+            **Calming Exercises for Anxiety:**
+            • **Gentle Yoga**: Focus on slow, controlled movements
+            • **Walking**: Especially in nature or with a friend
+            • **Swimming**: The rhythmic movement can be very soothing
+            • **Dancing**: To music you love (even just swaying)
+            
+            **Breathing Techniques:**
+            • **4-7-8 Breathing**: Inhale 4, hold 7, exhale 8
+            • **Box Breathing**: 4 counts in, 4 hold, 4 out, 4 hold
+            • **Belly Breathing**: Focus on expanding your belly, not your chest
+            
+            **Remember:** When you're anxious, your body is in "fight or flight" mode. Exercise helps your body return to a calmer state.
+            
+            Would you like a gentle, anxiety-reducing workout that focuses on calming movements and breathing?
+            """
+        }
+        
+        // Default stress relief response
+        return """
+        🌿 **Taking care of your mental health is just as important as physical health.**
+        
+        **Stress Relief Through Movement:**
+        • **Gentle Exercise**: Releases tension and stress hormones
+        • **Mindful Movement**: Focus on the present moment
+        • **Nature Walks**: Being outside can be very calming
+        • **Stretching**: Releases physical tension that builds up from stress
+        
+        **Remember:** You don't have to do intense workouts to benefit from exercise. Even gentle movement can significantly reduce stress and improve your mood.
+        
+        Would you like me to create a calming, stress-relief focused workout?
+        """
+    }
+    
+    private func provideRecoveryAdvice(_ userMessage: String) -> String {
+        let lowercased = userMessage.lowercased()
+        
+        if lowercased.contains("sleep") || lowercased.contains("rest") {
+            return """
+            😴 **Sleep and rest are crucial for your fitness progress!**
+            
+            **Sleep Tips for Better Recovery:**
+            • **Consistent Schedule**: Go to bed and wake up at the same time
+            • **Cool, Dark Room**: 65-68°F is ideal for sleep
+            • **No Screens**: Avoid phones/computers 1 hour before bed
+            • **Relaxing Routine**: Reading, gentle stretching, or meditation
+            
+            **Exercise and Sleep:**
+            • Regular exercise improves sleep quality
+            • Avoid intense workouts 3 hours before bedtime
+            • Gentle evening yoga can help you relax
+            • Morning exercise can help regulate your sleep cycle
+            
+            **Remember:** Your body does most of its repair work while you sleep. Good sleep is essential for muscle growth, recovery, and overall health.
+            
+            Would you like me to create a gentle, evening routine to help you sleep better?
+            """
+        }
+        
+        if lowercased.contains("recovery") || lowercased.contains("sore") {
+            return """
+            🛁 **Recovery is when your body gets stronger!**
+            
+            **Active Recovery Options:**
+            • **Gentle Walking**: Increases blood flow without stress
+            • **Light Stretching**: Helps reduce muscle tightness
+            • **Swimming**: Low-impact, full-body movement
+            • **Yoga**: Gentle poses that promote recovery
+            
+            **Recovery Tips:**
+            • **Hydration**: Drink plenty of water
+            • **Protein**: Helps repair muscle tissue
+            • **Sleep**: Your body repairs while you rest
+            • **Gentle Movement**: Keeps blood flowing to sore muscles
+            
+            **Remember:** Being sore is normal, but you shouldn't be in pain. Listen to your body and give it the rest it needs.
+            
+            Would you like me to create a gentle recovery workout that will help you feel better?
+            """
+        }
+        
+        // Default recovery response
+        return """
+        🌟 **Recovery is an essential part of your fitness journey!**
+        
+        **Why Recovery Matters:**
+        • Prevents injury and burnout
+        • Allows your body to adapt and get stronger
+        • Improves performance in your next workout
+        • Supports overall health and well-being
+        
+        **Recovery Activities:**
+        • Light walking or gentle movement
+        • Stretching and flexibility work
+        • Adequate sleep and rest
+        • Proper nutrition and hydration
+        
+        **Remember:** Rest days are not lazy days - they're when your body does its most important work!
+        
+        Would you like me to create a recovery-focused routine?
+        """
+    }
+    
+    private func isEmotionalSupport(_ message: String) -> Bool {
+        let emotionalKeywords = [
+            "sad", "depressed", "anxious", "stressed", "overwhelmed", "tired", "exhausted",
+            "frustrated", "angry", "lonely", "hopeless", "worthless", "guilty", "ashamed",
+            "afraid", "scared", "worried", "nervous", "panic", "crying", "tears",
+            "don't want to", "can't do this", "give up", "quit", "failure", "failed",
+            "not good enough", "hate myself", "no energy", "no motivation", "feel like"
+        ]
+        
+        return emotionalKeywords.contains { message.contains($0) }
     }
 } 
