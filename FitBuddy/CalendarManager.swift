@@ -59,16 +59,19 @@ class CalendarManager: ObservableObject {
         // Parse time string to get actual date with time
         let eventDate = parseDateTime(date: date, time: time)
         
-        // Add to local events array
+        // Add to local events array on main thread
         let event = CalendarEvent(
             title: title,
             date: eventDate,
             time: time,
             isWorkout: true
         )
-        events.append(event)
-        print("Event count after append: \(events.count)")
-        saveEvents()
+        
+        DispatchQueue.main.async {
+            self.events.append(event)
+            print("Event count after append: \(self.events.count)")
+            self.saveEvents()
+        }
         
         // Add to iOS Calendar
         addToIOSCalendar(title: title, date: eventDate)
@@ -121,8 +124,41 @@ class CalendarManager: ObservableObject {
     }
     
     func addWorkoutPlan(_ plan: WorkoutPlan) {
-        workoutPlans.append(plan)
-        print("Added workout plan: \(plan.title)")
+        DispatchQueue.main.async {
+            self.workoutPlans.append(plan)
+            print("Added workout plan: \(plan.title)")
+        }
+        
+        // Automatically schedule the workout for today at a default time if no specific time is given
+        let defaultTime = "6:00 PM"
+        addEvent(title: plan.title, date: Date(), time: defaultTime)
+    }
+    
+    func scheduleWorkout(_ plan: WorkoutPlan, date: Date, time: String) {
+        print("🎯 CalendarManager: Attempting to schedule workout '\(plan.title)' for \(date) at \(time)")
+        
+        // Parse the date and time
+        let scheduledDate = parseDateTime(date: date, time: time)
+        print("🎯 CalendarManager: Parsed scheduled date: \(scheduledDate)")
+        
+        // Add to local events array on main thread
+        let event = CalendarEvent(
+            title: plan.title,
+            date: scheduledDate,
+            time: time,
+            isWorkout: true
+        )
+        
+        DispatchQueue.main.async {
+            self.events.append(event)
+            print("🎯 CalendarManager: Added to local events. Total events: \(self.events.count)")
+            self.saveEvents()
+        }
+        
+        // Add to iOS Calendar
+        addToIOSCalendar(title: plan.title, date: scheduledDate)
+        
+        print("🎯 CalendarManager: Successfully scheduled workout: \(plan.title) for \(DateFormatter.prettyDate.string(from: scheduledDate))")
     }
     
     func getUpcomingWorkouts() -> [CalendarEvent] {
@@ -133,7 +169,7 @@ class CalendarManager: ObservableObject {
 
 // MARK: - Calendar Event Model
 struct CalendarEvent: Identifiable, Codable {
-    let id: UUID = UUID()
+    var id: UUID = UUID()
     let title: String
     let date: Date
     let time: String

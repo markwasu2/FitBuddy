@@ -54,7 +54,7 @@ class ChatEngine: ObservableObject {
         isProcessing = true
         
         Task {
-            await geminiService.sendMessage(input)
+            geminiService.sendMessage(input)
             
             await MainActor.run {
                 self.currentResponse = ChatResponse(text: "Message sent!", stage: .idle, actions: [.generateWorkout, .askQuestion])
@@ -195,7 +195,7 @@ class ChatEngine: ObservableObject {
     
     func generateWorkout() {
         Task {
-            await geminiService.sendMessage("Generate a workout plan for me")
+            geminiService.sendMessage("Generate a workout plan for me")
             await MainActor.run {
                 self.currentResponse = ChatResponse(text: "Workout request sent!", stage: .idle, actions: [.generateWorkout, .askQuestion])
             }
@@ -232,7 +232,7 @@ class ChatEngine: ObservableObject {
     
     func sendMessage(_ message: String) {
         Task {
-            _ = await geminiService.sendMessage(message)
+            geminiService.sendMessage(message)
             // Response is already added to geminiService.messages
         }
     }

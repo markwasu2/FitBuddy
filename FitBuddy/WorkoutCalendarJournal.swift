@@ -401,22 +401,4 @@ struct JournalCell: View {
 }
 
 // MARK: - SPARKLINE
-
-struct Sparkline: Shape {
-    let data: [Double]
-    func path(in rect: CGRect) -> Path {
-        guard data.count > 1 else { return Path() }
-        let minY = data.min() ?? 0
-        let maxY = data.max() ?? 1
-        let yRange = maxY - minY == 0 ? 1 : maxY - minY
-        let stepX = rect.width / CGFloat(data.count - 1)
-        var path = Path()
-        for (i, val) in data.enumerated() {
-            let x = CGFloat(i) * stepX
-            let y = rect.height - ((CGFloat(val - minY) / CGFloat(yRange)) * rect.height)
-            if i == 0 { path.move(to: CGPoint(x: x, y: y)) }
-            else { path.addLine(to: CGPoint(x: x, y: y)) }
-        }
-        return path
-    }
-} 
+// Using Sparkline from FitBuddyDashboard.swift 

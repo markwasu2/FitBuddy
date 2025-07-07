@@ -106,6 +106,14 @@ struct FitBuddyApp: App {
                 .environmentObject(workoutJournal)
                 .environmentObject(healthKitManager)
                 .environmentObject(notificationManager)
+                .onAppear {
+                    // Configure GeminiService with dependencies
+                    geminiService.configure(
+                        profileManager: profileManager,
+                        calendarManager: calendarManager,
+                        workoutPlanManager: workoutPlanManager
+                    )
+                }
         }
     }
 }
@@ -686,19 +694,26 @@ struct MainTabView: View {
                 }
                 .tag(2)
             
+            NutritionView()
+                .tabItem {
+                    Image(systemName: "fork.knife")
+                    Text("Nutrition")
+                }
+                .tag(3)
+            
             AICoachView()
                 .tabItem {
                     Image(systemName: "brain.head.profile")
                     Text("AI Coach")
                 }
-                .tag(3)
+                .tag(4)
             
             ProfileView()
                 .tabItem {
                     Image(systemName: "person.fill")
                     Text("Profile")
                 }
-                .tag(4)
+                .tag(5)
         }
         .accentColor(Color.primaryCoral)
         .preferredColorScheme(.light)
@@ -708,13 +723,13 @@ struct MainTabView: View {
         }
         .onChange(of: selectedTab) { oldValue, newValue in
             // Add safety check for tab changes
-            if newValue < 0 || newValue > 4 {
+            if newValue < 0 || newValue > 5 {
                 selectedTab = 0
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             // Reset to safe state when app becomes active
-            if selectedTab < 0 || selectedTab > 4 {
+            if selectedTab < 0 || selectedTab > 5 {
                 selectedTab = 0
             }
         }
@@ -1289,6 +1304,12 @@ struct AICoachView: View {
     @EnvironmentObject var profileManager: ProfileManager
     @State private var messageText = ""
     @State private var showingProfile = false
+    @State private var isRecording = false
+    @State private var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))
+    @State private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    @State private var recognitionTask: SFSpeechRecognitionTask?
+    @State private var audioEngine = AVAudioEngine()
+    @State private var isSpeechAuthorized = false
     
     var body: some View {
         NavigationView {
@@ -1331,6 +1352,19 @@ struct AICoachView: View {
                                     .stroke(Color(hex: "#E5E7EB"), lineWidth: 1) // Light border
                             )
                         
+                        // Voice input button
+                        Button(action: toggleVoiceRecording) {
+                            Image(systemName: isRecording ? "waveform" : "mic.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(isRecording ? Color.red : Color.primaryCoral)
+                                .frame(width: 40, height: 40)
+                                .background(
+                                    Circle()
+                                        .fill(isRecording ? Color.red.opacity(0.1) : Color.primaryCoral.opacity(0.1))
+                                )
+                        }
+                        .disabled(!isSpeechAuthorized)
+                        
                         Button(action: sendMessage) {
                             Image(systemName: "arrow.up.circle.fill")
                                 .font(.system(size: 32))
@@ -1360,6 +1394,7 @@ struct AICoachView: View {
             ProfileEditSheet()
         }
         .onAppear {
+            requestSpeechAuthorization()
             if geminiService.messages.isEmpty {
                 // Send welcome message
                 let welcomeMessage = ChatMessage(
@@ -1379,11 +1414,99 @@ struct AICoachView: View {
         messageText = ""
         
         Task {
-            await geminiService.sendMessage(messageToSend)
+            geminiService.sendMessage(messageToSend)
+        }
+    }
+    
+    // MARK: - Voice Input Functions
+    private func requestSpeechAuthorization() {
+        SFSpeechRecognizer.requestAuthorization { status in
+            DispatchQueue.main.async {
+                self.isSpeechAuthorized = status == .authorized
+            }
+        }
+    }
+    
+    private func toggleVoiceRecording() {
+        if isRecording {
+            stopVoiceRecording()
+        } else {
+            startVoiceRecording()
+        }
+    }
+    
+    private func startVoiceRecording() {
+        guard let speechRecognizer = speechRecognizer, speechRecognizer.isAvailable else {
+            print("Speech recognition not available")
+            return
+        }
+        
+        // Request audio session
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to set up audio session: \(error)")
+            return
+        }
+        
+        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+        
+        guard let recognitionRequest = recognitionRequest else {
+            print("Unable to create recognition request")
+            return
+        }
+        
+        recognitionRequest.shouldReportPartialResults = true
+        
+        let inputNode = audioEngine.inputNode
+        let recordingFormat = inputNode.outputFormat(forBus: 0)
+        inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+            recognitionRequest.append(buffer)
+        }
+        
+        audioEngine.prepare()
+        
+        do {
+            try audioEngine.start()
+            isRecording = true
+        } catch {
+            print("Failed to start audio engine: \(error)")
+            return
+        }
+        
+        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { result, error in
+            if let result = result {
+                DispatchQueue.main.async {
+                    self.messageText = result.bestTranscription.formattedString
+                }
+            }
+            
+            if error != nil || result?.isFinal == true {
+                self.stopVoiceRecording()
+            }
+        }
+    }
+    
+    private func stopVoiceRecording() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        
+        isRecording = false
+        recognitionRequest = nil
+        recognitionTask = nil
+        
+        // Deactivate audio session
+        do {
+            try AVAudioSession.sharedInstance().setActive(false)
+        } catch {
+            print("Failed to deactivate audio session: \(error)")
         }
     }
 }
-
 
 // MARK: - Profile View
 struct ProfileView: View {
@@ -1670,11 +1793,17 @@ struct CalendarView: View {
     @EnvironmentObject var workoutPlanManager: WorkoutPlanManager
     @State private var selectedDate = Date()
     @State private var showingAddWorkout = false
+    @State private var showingPersonalizedSetup = false
     
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 24) {
+                    // Personalized Workout Setup
+                    if !workoutPlanManager.isPersonalizationComplete {
+                        personalizedSetupSection
+                    }
+                    
                     // Calendar Grid
                     calendarGridSection
                     
@@ -1692,11 +1821,53 @@ struct CalendarView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingAddWorkout = true }) {
-                        Image(systemName: "plus")
-                            .foregroundColor(Color.primaryCoral)
+                    HStack(spacing: 16) {
+                        if workoutPlanManager.isPersonalizationComplete {
+                            Button(action: { showingPersonalizedSetup = true }) {
+                                Image(systemName: "person.crop.circle.badge.plus")
+                                    .foregroundColor(Color.primaryCoral)
+                            }
+                        }
+                        
+                        Button(action: { showingAddWorkout = true }) {
+                            Image(systemName: "plus")
+                                .foregroundColor(Color.primaryCoral)
+                        }
                     }
                 }
+            }
+            .sheet(isPresented: $showingPersonalizedSetup) {
+                PersonalizedWorkoutSetupView()
+                    .environmentObject(workoutPlanManager)
+            }
+        }
+    }
+    
+    private var personalizedSetupSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Personalize Your Workouts")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text("Get customized workout plans that fit your schedule and preferences")
+                        .font(.subheadline)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "figure.run.circle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(Color.primaryCoral)
+            }
+            .padding(20)
+            .background(Color.white)
+            .cornerRadius(16)
+            .onTapGesture {
+                showingPersonalizedSetup = true
             }
         }
     }
@@ -1761,7 +1932,7 @@ struct CalendarView: View {
                 .fontWeight(.semibold)
                 .foregroundColor(Color.textPrimary)
             
-            if workoutsForSelectedDate.isEmpty {
+            if personalizedWorkoutsForSelectedDate.isEmpty && workoutsForSelectedDate.isEmpty {
                 VStack(spacing: 12) {
                     Image(systemName: "calendar.badge.plus")
                         .font(.system(size: 40))
@@ -1771,11 +1942,19 @@ struct CalendarView: View {
                         .font(.subheadline)
                         .foregroundColor(Color.textSecondary)
                     
-                    Button("Add Workout") {
-                        showingAddWorkout = true
+                    if !workoutPlanManager.isPersonalizationComplete {
+                        Button("Personalize Workouts") {
+                            showingPersonalizedSetup = true
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(Color.primaryCoral)
+                    } else {
+                        Button("Add Workout") {
+                            showingAddWorkout = true
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(Color.primaryCoral)
                     }
-                    .font(.subheadline)
-                    .foregroundColor(Color.primaryCoral)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(40)
@@ -1783,6 +1962,12 @@ struct CalendarView: View {
                 .cornerRadius(12)
             } else {
                 VStack(spacing: 12) {
+                    // Show personalized workouts first
+                    ForEach(personalizedWorkoutsForSelectedDate, id: \.id) { plan in
+                        PersonalizedWorkoutCard(plan: plan)
+                    }
+                    
+                    // Show regular workouts
                     ForEach(workoutsForSelectedDate, id: \.id) { workout in
                         ActivityJournalCard(activity: workout)
                     }
@@ -1861,9 +2046,17 @@ struct CalendarView: View {
     
     private func hasWorkoutOnDate(_ date: Date) -> Bool {
         // Check if there's a workout scheduled for this date
-        return workoutsForSelectedDate.contains { workout in
+        let hasRegularWorkout = workoutsForSelectedDate.contains { workout in
             Calendar.current.isDate(workout.date, inSameDayAs: date)
         }
+        
+        let hasPersonalizedWorkout = !workoutPlanManager.getWorkoutsForDate(date).isEmpty
+        
+        return hasRegularWorkout || hasPersonalizedWorkout
+    }
+    
+    private var personalizedWorkoutsForSelectedDate: [PersonalizedWorkoutPlan] {
+        return workoutPlanManager.getWorkoutsForDate(selectedDate)
     }
     
     private var workoutsForSelectedDate: [WorkoutEntry] {
@@ -1942,6 +2135,178 @@ struct CalendarDayView: View {
             )
         }
         .buttonStyle(PlainButtonStyle())
+    }
+}
+
+// MARK: - Personalized Workout Card
+struct PersonalizedWorkoutCard: View {
+    let plan: PersonalizedWorkoutPlan
+    @State private var isExpanded = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Header
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(plan.title)
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.textPrimary)
+                    
+                    Text(plan.formattedSchedule)
+                        .font(.subheadline)
+                        .foregroundColor(Color.textSecondary)
+                }
+                
+                Spacer()
+                
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(plan.formattedDuration)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(Color.primaryCoral)
+                    
+                    Text(plan.difficulty.rawValue)
+                        .font(.caption)
+                        .foregroundColor(Color.textSecondary)
+                }
+            }
+            
+            // Equipment and muscle groups
+            HStack(spacing: 16) {
+                if !plan.equipment.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Equipment")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text(plan.equipment.map { $0.rawValue }.joined(separator: ", "))
+                            .font(.subheadline)
+                            .foregroundColor(Color.textPrimary)
+                    }
+                }
+                
+                if !plan.targetMuscleGroups.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Target Areas")
+                            .font(.caption)
+                            .foregroundColor(Color.textSecondary)
+                        
+                        Text(plan.targetMuscleGroups.joined(separator: ", "))
+                            .font(.subheadline)
+                            .foregroundColor(Color.textPrimary)
+                    }
+                }
+            }
+            
+            // Exercises (expandable)
+            if !plan.exercises.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Button(action: {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            isExpanded.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Text("Exercises (\(plan.exercises.count))")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(Color.primaryCoral)
+                            
+                            Spacer()
+                            
+                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                .font(.caption)
+                                .foregroundColor(Color.primaryCoral)
+                        }
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    if isExpanded {
+                        VStack(spacing: 12) {
+                            ForEach(plan.exercises, id: \.id) { exercise in
+                                ExerciseRow(exercise: exercise)
+                            }
+                        }
+                        .padding(.top, 8)
+                    }
+                }
+            }
+            
+            // Action buttons
+            HStack(spacing: 12) {
+                Button(action: {
+                    // Start workout action
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.fill")
+                        Text("Start Workout")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.primaryCoral)
+                    .cornerRadius(12)
+                }
+                
+                Button(action: {
+                    // Edit workout action
+                }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "pencil")
+                        Text("Edit")
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.primaryCoral)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 44)
+                    .background(Color.primaryCoral.opacity(0.1))
+                    .cornerRadius(12)
+                }
+            }
+        }
+        .padding(20)
+        .background(Color.white)
+        .cornerRadius(16)
+    }
+}
+
+// MARK: - Exercise Row
+struct ExerciseRow: View {
+    let exercise: PersonalizedExercise
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.name)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.textPrimary)
+                
+                Text(exercise.muscleGroup)
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
+            }
+            
+            Spacer()
+            
+            VStack(alignment: .trailing, spacing: 4) {
+                Text(exercise.formattedSets)
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(Color.textPrimary)
+                
+                Text(exercise.formattedRest)
+                    .font(.caption)
+                    .foregroundColor(Color.textSecondary)
+            }
+        }
+        .padding(12)
+        .background(Color.offWhite)
+        .cornerRadius(8)
     }
 }
 
