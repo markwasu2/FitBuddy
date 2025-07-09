@@ -9,7 +9,10 @@ final class FoodCaptureCoordinator: ObservableObject, Identifiable {
     var onImagePicked: ((UIImage) -> Void)?
 
     var view: some View {
-        ImagePickerView(isPresented: $isPresented, onImagePicked: { img in
+        ImagePickerView(isPresented: Binding(
+            get: { self.isPresented },
+            set: { self.isPresented = $0 }
+        ), onImagePicked: { img in
             self.image = img
             self.onImagePicked?(img)
         })

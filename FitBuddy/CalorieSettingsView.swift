@@ -32,14 +32,14 @@ struct CalorieSettingsView: View {
                     
                     Text("\(healthKitManager.dailyCalorieGoal)")
                         .font(.system(size: 48, weight: .bold))
-                        .foregroundColor(.primaryCoral)
+                        .foregroundColor(.accent)
                     
                     Text("calories")
                         .font(.subheadline)
                         .foregroundColor(.textSecondary)
                 }
                 .padding()
-                .background(Color.bgSecondary)
+                .background(Color.background)
                 .cornerRadius(16)
                 
                 // Quick Goal Presets
@@ -49,10 +49,10 @@ struct CalorieSettingsView: View {
                         .foregroundColor(.textPrimary)
                     
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        GoalPresetButton(title: "Weight Loss", calories: 1500, color: .mutedTerracotta)
-                        GoalPresetButton(title: "Maintenance", calories: 2000, color: .primaryCoral)
-                        GoalPresetButton(title: "Muscle Gain", calories: 2500, color: .accentBlue)
-                        GoalPresetButton(title: "Athlete", calories: 3000, color: .primaryCoral)
+                        GoalPresetButton(title: "Weight Loss", calories: 1500, color: .error)
+                        GoalPresetButton(title: "Maintenance", calories: 2000, color: .accent)
+                        GoalPresetButton(title: "Muscle Gain", calories: 2500, color: .secondary)
+                        GoalPresetButton(title: "Athlete", calories: 3000, color: .accent)
                     }
                 }
                 
@@ -87,7 +87,7 @@ struct CalorieSettingsView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.accentBlue)
+                    .background(Color.accent)
                     .foregroundColor(.white)
                     .cornerRadius(12)
                 }
@@ -95,7 +95,7 @@ struct CalorieSettingsView: View {
                 Spacer()
             }
             .padding()
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(Color.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -143,7 +143,7 @@ struct GoalPresetButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.bgSecondary)
+            .background(Color.background)
             .cornerRadius(12)
         }
     }
@@ -273,7 +273,7 @@ struct CalorieGoalCalculatorView: View {
                             .pickerStyle(MenuPickerStyle())
                             .frame(maxWidth: .infinity)
                             .padding()
-                            .background(Color.bgSecondary)
+                            .background(Color.background)
                             .cornerRadius(8)
                         }
                         
@@ -299,7 +299,7 @@ struct CalorieGoalCalculatorView: View {
                         
                         Text("\(calculatedGoal)")
                             .font(.system(size: 48, weight: .bold))
-                            .foregroundColor(.primaryCoral)
+                            .foregroundColor(.accent)
                         
                         Text("calories")
                             .font(.subheadline)
@@ -314,14 +314,14 @@ struct CalorieGoalCalculatorView: View {
                         .controlSize(.large)
                     }
                     .padding()
-                    .background(Color.bgSecondary)
+                    .background(Color.background)
                     .cornerRadius(16)
                     
                     Spacer()
                 }
                 .padding()
             }
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(Color.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {

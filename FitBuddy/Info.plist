@@ -16,5 +16,7 @@
 	<string>FitBuddy uses speech recognition to understand your voice commands for workout planning and navigation.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>FitBuddy needs access to your photo library to scan food items for calorie tracking.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>FitBuddy needs camera access to capture photos of your meals for nutrition tracking.</string>
 </dict>
 </plist>

@@ -31,96 +31,11 @@ struct FoodJournalView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 0) {
-                // Header with calorie summary
-                VStack(spacing: 16) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Today's Calories")
-                                .font(.headline)
-                                .foregroundColor(.textPrimary)
-                            Text("\(Int(totalCaloriesToday)) / \(healthKitManager.dailyCalorieGoal)")
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .foregroundColor(.primaryCoral)
-                        }
-                        Spacer()
-                        
-                        // Progress ring
-                        ZStack {
-                            Circle()
-                                .stroke(Color.bgSecondary, lineWidth: 8)
-                                .frame(width: 60, height: 60)
-                            
-                            Circle()
-                                .trim(from: 0, to: min(totalCaloriesToday / Double(healthKitManager.dailyCalorieGoal), 1.0))
-                                .stroke(Color.primaryCoral, style: StrokeStyle(lineWidth: 8, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                                .frame(width: 60, height: 60)
-                                .animation(.easeInOut(duration: 0.3), value: totalCaloriesToday)
-                        }
-                    }
-                    
-                    // Progress bar
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            Rectangle()
-                                .fill(Color.bgSecondary)
-                                .frame(height: 8)
-                                .cornerRadius(4)
-                            
-                            Rectangle()
-                                .fill(totalCaloriesToday > Double(healthKitManager.dailyCalorieGoal) ? Color.mutedTerracotta : Color.primaryCoral)
-                                .frame(width: geometry.size.width * min(totalCaloriesToday / Double(healthKitManager.dailyCalorieGoal), 1.0), height: 8)
-                                .cornerRadius(4)
-                                .animation(.easeInOut(duration: 0.3), value: totalCaloriesToday)
-                        }
-                    }
-                    .frame(height: 8)
-                }
-                .padding()
-                .background(Color.bgSecondary)
-                
-                // Search bar
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundColor(.textSecondary)
-                    TextField("Search foods...", text: $searchText)
-                }
-                .padding()
-                .background(Color.bgSecondary)
-                .cornerRadius(12)
-                .padding(.horizontal)
-                .padding(.top)
-                
-                // Food entries list
-                if filteredEntries.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "fork.knife")
-                            .font(.system(size: 48))
-                            .foregroundColor(.textSecondary)
-                        
-                        Text(searchText.isEmpty ? "No food logged today" : "No foods found")
-                            .font(.headline)
-                            .foregroundColor(.textPrimary)
-                        
-                        Text(searchText.isEmpty ? "Tap the + button to add your first meal" : "Try a different search term")
-                            .font(.subheadline)
-                            .foregroundColor(.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    List {
-                        ForEach(filteredEntries) { entry in
-                            FoodJournalEntryRow(entry: entry) {
-                                healthKitManager.removeFoodEntry(entry)
-                            }
-                        }
-                    }
-                    .listStyle(PlainListStyle())
-                }
+                headerSection
+                searchBarSection
+                foodEntriesSection
             }
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(Color.background.ignoresSafeArea())
             .navigationTitle("Food Journal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -129,7 +44,6 @@ struct FoodJournalView: View {
                         dismiss()
                     }
                 }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: { showingAddFood = true }) {
                         Image(systemName: "plus")
@@ -141,6 +55,100 @@ struct FoodJournalView: View {
                     .environmentObject(healthKitManager)
             }
         }
+    }
+
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Today's Calories")
+                        .font(.headline)
+                        .foregroundColor(.textPrimary)
+                    Text("\(Int(totalCaloriesToday)) / \(healthKitManager.dailyCalorieGoal)")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.accent)
+                }
+                Spacer()
+                ZStack {
+                    Circle()
+                        .stroke(Color.background, lineWidth: 8)
+                        .frame(width: 60, height: 60)
+                    Circle()
+                        .trim(from: 0, to: min(totalCaloriesToday / Double(healthKitManager.dailyCalorieGoal), 1.0))
+                        .stroke(Color.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 60, height: 60)
+                        .animation(.easeInOut(duration: 0.3), value: totalCaloriesToday)
+                }
+            }
+            GeometryReader { geometry in
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.background)
+                        .frame(height: 8)
+                        .cornerRadius(4)
+                    Rectangle()
+                        .fill(totalCaloriesToday > Double(healthKitManager.dailyCalorieGoal) ? Color.error : Color.accent)
+                        .frame(width: geometry.size.width * min(totalCaloriesToday / Double(healthKitManager.dailyCalorieGoal), 1.0), height: 8)
+                        .cornerRadius(4)
+                        .animation(.easeInOut(duration: 0.3), value: totalCaloriesToday)
+                }
+            }
+            .frame(height: 8)
+        }
+        .padding()
+        .background(Color.background)
+    }
+
+    private var searchBarSection: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.textSecondary)
+            TextField("Search foods...", text: $searchText)
+        }
+        .padding()
+        .background(Color.background)
+        .cornerRadius(12)
+        .padding(.horizontal)
+        .padding(.top)
+    }
+
+    private var foodEntriesSection: some View {
+        Group {
+            if filteredEntries.isEmpty {
+                foodEmptyStateSection
+            } else {
+                foodListSection
+            }
+        }
+    }
+
+    private var foodEmptyStateSection: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "fork.knife")
+                .font(.system(size: 48))
+                .foregroundColor(.textSecondary)
+            Text(searchText.isEmpty ? "No food logged today" : "No foods found")
+                .font(.headline)
+                .foregroundColor(.textPrimary)
+            Text(searchText.isEmpty ? "Tap the + button to add your first meal" : "Try a different search term")
+                .font(.subheadline)
+                .foregroundColor(.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var foodListSection: some View {
+        List {
+            ForEach(filteredEntries) { entry in
+                FoodJournalEntryRow(entry: entry) {
+                    healthKitManager.removeFoodEntry(entry)
+                }
+            }
+        }
+        .listStyle(PlainListStyle())
     }
 }
 
@@ -189,7 +197,7 @@ struct FoodJournalEntryRow: View {
                 Text("\(Int(entry.calories))")
                     .font(.title3)
                     .fontWeight(.bold)
-                    .foregroundColor(.primaryCoral)
+                    .foregroundColor(.accent)
                 
                 Text("cal")
                     .font(.caption)
@@ -322,7 +330,7 @@ struct AddFoodView: View {
                                     .foregroundColor(.textPrimary)
                                     .frame(maxWidth: .infinity)
                                     .padding(.vertical, 8)
-                                    .background(Color.bgSecondary)
+                                    .background(Color.background)
                                     .cornerRadius(8)
                             }
                         }
@@ -339,13 +347,13 @@ struct AddFoodView: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(canAddFood ? Color.primaryCoral : Color.gray)
+                        .background(canAddFood ? Color.accent : Color.gray)
                         .cornerRadius(12)
                 }
                 .disabled(!canAddFood)
             }
             .padding()
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(Color.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -397,7 +405,7 @@ struct MealTypeButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(isSelected ? mealTypeColor : Color.bgSecondary)
+            .background(isSelected ? mealTypeColor : Color.background)
             .cornerRadius(12)
         }
     }

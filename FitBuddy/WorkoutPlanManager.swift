@@ -322,10 +322,10 @@ class WorkoutPlanManager: ObservableObject {
     
     private func generateStrengthExercises() -> [PersonalizedExercise] {
         let baseExercises = [
-            ("Push-ups", 3, 10, nil, nil, 60, "Standard push-ups", "Chest", .none),
-            ("Squats", 3, 15, nil, nil, 60, "Bodyweight squats", "Legs", .none),
-            ("Plank", 3, nil, nil, 30, 60, "Hold plank position", "Core", .none),
-            ("Lunges", 3, 10, nil, nil, 60, "Alternating lunges", "Legs", .none)
+            ("Push-ups", 3, 10, nil as Double?, nil as Int?, 60, "Standard push-ups", "Chest", Equipment.none),
+            ("Squats", 3, 15, nil as Double?, nil as Int?, 60, "Bodyweight squats", "Legs", Equipment.none),
+            ("Plank", 3, 0, nil as Double?, 30, 60, "Hold plank position", "Core", Equipment.none),
+            ("Lunges", 3, 10, nil as Double?, nil as Int?, 60, "Alternating lunges", "Legs", Equipment.none)
         ]
         
         return baseExercises.map { name, sets, reps, weight, duration, rest, instructions, muscle, equipment in
@@ -356,7 +356,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 30,
                 instructions: "Jump while raising arms overhead",
                 muscleGroup: "Full Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["High Knees", "Mountain Climbers"]
             ),
@@ -369,7 +369,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 60,
                 instructions: "Squat, push-up, jump sequence",
                 muscleGroup: "Full Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Squat Thrusts", "Modified Burpees"]
             )
@@ -387,7 +387,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 30,
                 instructions: "Complete sun salutation sequence",
                 muscleGroup: "Full Body",
-                equipment: .yogaMat,
+                equipment: Equipment.yogaMat,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Modified Sun Salutation"]
             )
@@ -405,7 +405,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 15,
                 instructions: "30 seconds work, 15 seconds rest",
                 muscleGroup: "Full Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Modified Intervals"]
             )
@@ -423,7 +423,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 30,
                 instructions: "Classic Pilates hundred exercise",
                 muscleGroup: "Core",
-                equipment: .yogaMat,
+                equipment: Equipment.yogaMat,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Modified Hundred"]
             )
@@ -441,7 +441,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 120,
                 instructions: "5 minutes run, 2 minutes walk",
                 muscleGroup: "Cardiovascular",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Walking", "Jogging"]
             )
@@ -459,7 +459,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 180,
                 instructions: "10 minutes cycling, 3 minutes rest",
                 muscleGroup: "Cardiovascular",
-                equipment: .stationaryBike,
+                equipment: Equipment.stationaryBike,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Outdoor Cycling"]
             )
@@ -477,7 +477,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 60,
                 instructions: "5 minutes swimming, 1 minute rest",
                 muscleGroup: "Full Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Water Aerobics"]
             )
@@ -495,7 +495,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 60,
                 instructions: "3 minutes shadow boxing combinations",
                 muscleGroup: "Upper Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Heavy Bag Work"]
             )
@@ -513,7 +513,7 @@ class WorkoutPlanManager: ObservableObject {
                 restTime: 0,
                 instructions: "20 minutes dance cardio routine",
                 muscleGroup: "Full Body",
-                equipment: .none,
+                equipment: Equipment.none,
                 difficulty: preferences.fitnessLevel,
                 alternatives: ["Zumba", "Hip Hop Dance"]
             )
@@ -588,6 +588,9 @@ class WorkoutPlanManager: ObservableObject {
                 scheduleWorkout(plan, on: day)
             }
         }
+        
+        // Also sync to Google Calendar
+        googleCalendarService.syncWorkoutsToGoogleCalendar(workouts: personalizedPlans)
     }
     
     private func scheduleWorkout(_ plan: PersonalizedWorkoutPlan, on day: WeekDay) {

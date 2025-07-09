@@ -45,15 +45,6 @@ class GoogleCalendarService: ObservableObject {
             completion(false)
             return
         }
-        
-        // Create Google Calendar event
-        let event = GoogleCalendarEvent(
-            summary: title,
-            description: description,
-            start: GoogleCalendarDateTime(date: date),
-            end: GoogleCalendarDateTime(date: Calendar.current.date(byAdding: .minute, value: 60, to: date) ?? date)
-        )
-        
         // In a real implementation, this would make an API call to Google Calendar
         // For now, we'll simulate the API call
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) {

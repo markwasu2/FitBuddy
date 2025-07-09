@@ -23,7 +23,7 @@ struct WorkoutCalendarView: View {
                     DailyWorkoutView(date: date).environmentObject(workoutJournal)
                 }
             }
-            .background(Color.bgPrimary.ignoresSafeArea())
+            .background(Color.background.ignoresSafeArea())
             .navigationTitle("Calendar")
             .onChange(of: selectedDate) { oldValue, newValue in 
                 showDaily = true 
@@ -37,7 +37,7 @@ struct CalendarGrid: View {
     @ObservedObject var workoutJournal: WorkoutJournal
     private let calendar = Calendar.current
     private let days = ["S","M","T","W","T","F","S"]
-    private let accent = Color.accentBlue
+    private let accent = Color.accent
 
     private var monthDates: [Date] {
         let today = Date()
@@ -59,7 +59,7 @@ struct CalendarGrid: View {
         VStack(spacing: 8) {
             HStack {
                 Text(Date(), format: .dateTime.year().month())
-                    .font(.h2)
+                    .font(.title2)
                     .foregroundColor(.textPrimary)
                 Spacer()
             }.padding(.horizontal)
@@ -80,13 +80,13 @@ struct CalendarGrid: View {
                             VStack(spacing: 2) {
                                 Text("\(calendar.component(.day, from: date))")
                                     .font(.body)
-                                    .foregroundColor(isToday ? .primaryCoral : .textPrimary)
+                                    .foregroundColor(isToday ? .accent : .textPrimary)
                                     .frame(width: 32, height: 32)
-                                    .background(isSelected ? Color.primaryCoral.opacity(0.15) : .clear)
+                                    .background(isSelected ? Color.accent.opacity(0.15) : .clear)
                                     .clipShape(Circle())
                                 if hasWorkout {
                                     Circle()
-                                        .fill(isToday ? Color.primaryCoral : Color.primaryCoral)
+                                        .fill(isToday ? Color.accent : Color.accent)
                                         .frame(width: 6, height: 6)
                                 } else {
                                     Spacer().frame(height: 6)
@@ -100,8 +100,8 @@ struct CalendarGrid: View {
                 }
             }
         }
-        .fhCard()
-        .padding(.horizontal)
+        .cleanCardStyle()
+        .padding(.horizontal, .spacingM)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 }
@@ -121,7 +121,7 @@ struct DailyWorkoutView: View {
         VStack(spacing: 20) {
             HStack {
                 Text(date, format: .dateTime.weekday().month().day().year())
-                    .font(.h2)
+                    .font(.title2)
                     .foregroundColor(.textPrimary)
                 Spacer()
                 ProgressRing(progress: progress)
@@ -142,14 +142,14 @@ struct DailyWorkoutView: View {
             Button(action: { showPicker = true }) {
                 HStack {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundColor(.primaryCoral)
+                        .foregroundColor(.accent)
                     Text("Add Exercise")
                         .font(.body)
-                        .foregroundColor(.primaryCoral)
+                        .foregroundColor(.accent)
                 }
                 .padding(.vertical, 8)
                 .frame(maxWidth: .infinity)
-                .background(Color.bgSecondary)
+                .background(Color.background)
                 .cornerRadius(12)
             }
             .padding(.horizontal)
@@ -160,13 +160,13 @@ struct DailyWorkoutView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.primaryCoral)
+                    .background(Color.accent)
                     .cornerRadius(14)
             }
             .padding(.horizontal)
             .padding(.bottom, 12)
         }
-        .background(Color.bgPrimary.ignoresSafeArea())
+        .background(Color.background.ignoresSafeArea())
         .sheet(isPresented: $showPicker) {
             ExercisePickerSheet(selected: $entry.exercises)
         }
@@ -215,8 +215,8 @@ struct ChecklistCard: View {
                 }
             }
         }
-        .fhCard()
-        .padding(.horizontal)
+        .cleanCardStyle()
+        .padding(.horizontal, .spacingM)
         .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 }
@@ -225,7 +225,7 @@ struct ChecklistToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack {
             Image(systemName: configuration.isOn ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(configuration.isOn ? .primaryCoral : .textSecondary)
+                .foregroundColor(configuration.isOn ? .accent : .textSecondary)
                 .font(.system(size: 24))
                 .onTapGesture { configuration.isOn.toggle() }
             configuration.label
@@ -243,7 +243,7 @@ struct ProgressRing: View {
                 .stroke(Color.textSecondary.opacity(0.2), lineWidth: 8)
             Circle()
                 .trim(from: 0, to: progress)
-                .stroke(Color.primaryCoral, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .stroke(Color.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                 .rotationEffect(.degrees(-90))
                 .animation(.spring(), value: progress)
         }
@@ -290,7 +290,7 @@ struct ExercisePickerSheet: View {
                             }) {
                                 HStack {
                                     Image(systemName: tempSelected.contains(ex) ? "checkmark.square.fill" : "square")
-                                        .foregroundColor(tempSelected.contains(ex) ? .primaryCoral : .textSecondary)
+                                        .foregroundColor(tempSelected.contains(ex) ? .accent : .textSecondary)
                                     Text(ex.name)
                                         .font(.body)
                                         .foregroundColor(.textPrimary)
@@ -299,11 +299,11 @@ struct ExercisePickerSheet: View {
                                 .padding(.vertical, 10)
                                 .padding(.horizontal)
                             }
-                            .background(Color.bgSecondary)
+                            .background(Color.background)
                         }
                     }
                 }
-                .background(Color.bgPrimary)
+                .background(Color.background)
                 Button(action: {
                     selected.append(contentsOf: tempSelected.filter { !selected.contains($0) })
                     dismiss()
@@ -313,7 +313,7 @@ struct ExercisePickerSheet: View {
                         .foregroundColor(.white)
                         .frame(maxWidth: .infinity)
                         .padding()
-                        .background(Color.primaryCoral)
+                        .background(Color.accent)
                         .cornerRadius(14)
                 }
                 .padding()
@@ -336,18 +336,22 @@ struct WorkoutJournalList: View {
     private let calendar = Calendar.current
     var body: some View {
         NavigationView {
-            List {
-                ForEach(workoutJournal.entries) { entry in
-                    NavigationLink(destination: DailyWorkoutView(date: entry.date).environmentObject(workoutJournal)) {
-                        JournalCell(entry: entry)
-                    }
-                }
-                .onDelete(perform: delete)
-            }
-            .listStyle(.plain)
-            .background(Color.bgPrimary)
-            .navigationTitle("Journal")
+            workoutJournalListSection
         }
+    }
+
+    private var workoutJournalListSection: some View {
+        List {
+            ForEach(workoutJournal.entries) { entry in
+                NavigationLink(destination: DailyWorkoutView(date: entry.date).environmentObject(workoutJournal)) {
+                    JournalCell(entry: entry)
+                }
+            }
+            .onDelete(perform: delete)
+        }
+        .listStyle(.plain)
+        .background(Color.background)
+        .navigationTitle("Journal")
     }
     func delete(at offsets: IndexSet) {
         for idx in offsets {
@@ -389,12 +393,12 @@ struct JournalCell: View {
                     .foregroundColor(.textSecondary)
             }
             Spacer()
-            Sparkline(data: calories)
-                .stroke(Color.textSecondary, lineWidth: 2)
-                .frame(width: 36, height: 16)
+            // Replace Sparkline with a simple progress view
+            ProgressView(value: calories.last ?? 0, total: 2000)
+                .progressViewStyle(LinearProgressViewStyle(tint: .accent))
             Text(percent == 100 ? "100%" : "\(percent)%")
                 .font(.caption)
-                .foregroundColor(percent == 100 ? .primaryCoral : .primaryCoral)
+                .foregroundColor(percent == 100 ? .accent : .accent)
         }
         .padding(.vertical, 8)
     }

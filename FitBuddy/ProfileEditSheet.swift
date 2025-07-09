@@ -27,169 +27,19 @@ struct ProfileEditSheet: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(spacing: 24) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Name")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            TextField("Enter your name", text: $name)
-                                .font(.system(size: 17))
-                                .textFieldStyle(.roundedBorder)
-                                .autocapitalization(.words)
-                        }
-                        .background(Color.bgSecondary)
-                        
-                        // Weight Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Weight")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            HStack(spacing: 16) {
-                                Picker("Weight Value", selection: $weightValue) {
-                                    ForEach(30...350, id: \.self) { value in
-                                        Text("\(value)").tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(maxWidth: .infinity)
-                                
-                                Picker("Weight Unit", selection: $weightUnit) {
-                                    Text("lbs").tag("lbs")
-                                    Text("kg").tag("kg")
-                                }
-                                .pickerStyle(.wheel)
-                                .frame(maxWidth: .infinity)
-                            }
-                            .onChange(of: weightUnit) { oldValue, newValue in
-                                // Convert weight when unit changes
-                                if weightUnit == "kg" {
-                                    weightValue = Int(Double(weightValue) * 2.20462)
-                                } else {
-                                    weightValue = Int(Double(weightValue) / 2.20462)
-                                }
-                            }
-                        }
-                        .background(Color.bgSecondary)
-                        
-                        // Height Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Height")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            
-                            Picker("Height Mode", selection: $heightMode) {
-                                Text("Centimeters").tag("cm")
-                                Text("Feet & Inches").tag("ft")
-                            }
-                            .pickerStyle(.segmented)
-                            .padding(.bottom, 8)
-                            
-                            if heightMode == "cm" {
-                                Picker("Height CM", selection: $heightValue) {
-                                    ForEach(100...250, id: \.self) { value in
-                                        Text("\(value) cm").tag(value)
-                                    }
-                                }
-                                .pickerStyle(.wheel)
-                            } else {
-                                HStack(spacing: 16) {
-                                    Picker("Feet", selection: $feet) {
-                                        ForEach(3...8, id: \.self) { value in
-                                            Text("\(value) ft").tag(value)
-                                        }
-                                    }
-                                    .pickerStyle(.wheel)
-                                    .frame(maxWidth: .infinity)
-                                    
-                                    Picker("Inches", selection: $inches) {
-                                        ForEach(0...11, id: \.self) { value in
-                                            Text("\(value) in").tag(value)
-                                        }
-                                    }
-                                    .pickerStyle(.wheel)
-                                    .frame(maxWidth: .infinity)
-                                }
-                                .onChange(of: feet) { oldValue, newValue in updateHeightCM() }
-                                .onChange(of: inches) { oldValue, newValue in updateHeightCM() }
-                            }
-                        }
-                        .background(Color.bgSecondary)
-                        
-                        // Age Section
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Age")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            Picker("Age", selection: $age) {
-                                ForEach(10...100, id: \.self) { value in
-                                    Text("\(value) years").tag(value)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                        }
-                        .background(Color.bgSecondary)
-                        
-                        // Fitness Level Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Fitness Level")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            HStack(spacing: 12) {
-                                ForEach(levelOptions, id: \.self) { option in
-                                    Button(action: { level = option }) {
-                                        Text(option)
-                                            .font(.system(size: 15, weight: .medium))
-                                            .padding(.horizontal, 16)
-                                            .padding(.vertical, 8)
-                                            .background(level == option ? Color(red: 0/255, green: 123/255, blue: 255/255) : Color.clear)
-                                            .foregroundColor(level == option ? .white : Color(red: 0/255, green: 123/255, blue: 255/255))
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 20)
-                                                    .stroke(Color(red: 0/255, green: 123/255, blue: 255/255), lineWidth: 1)
-                                            )
-                                            .cornerRadius(20)
-                                    }
-                                }
-                            }
-                        }
-                        .background(Color.bgSecondary)
-                        
-                        // Equipment Section
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Equipment")
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(Color.textSecondary)
-                            LazyVGrid(columns: [
-                                GridItem(.flexible()),
-                                GridItem(.flexible()),
-                                GridItem(.flexible())
-                            ], spacing: 8) {
-                                ForEach(equipmentOptions, id: \.self) { option in
-                                    Button(action: {
-                                        if equipment.contains(option) {
-                                            equipment.remove(option)
-                                        } else {
-                                            equipment.insert(option)
-                                        }
-                                    }) {
-                                        Text(option)
-                                            .font(.system(size: 13, weight: .medium))
-                                            .padding(.horizontal, 12)
-                                            .padding(.vertical, 6)
-                                            .background(equipment.contains(option) ? Color(red: 0/255, green: 123/255, blue: 255/255) : Color(red: 242/255, green: 242/255, blue: 247/255))
-                                            .foregroundColor(equipment.contains(option) ? .white : .black)
-                                            .cornerRadius(16)
-                                    }
-                                }
-                            }
-                        }
-                        .background(Color.bgSecondary)
+                        nameSection
+                        weightSection
+                        heightSection
+                        ageSection
+                        levelSection
+                        equipmentSection
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 100) // Space for save button
                 }
             }
-            .background(Color.bgPrimary)
+            .background(Color.background)
             .navigationTitle("Edit Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -218,6 +68,165 @@ struct ProfileEditSheet: View {
             .padding(.vertical, 16)
             .background(Color.white)
         }
+    }
+    
+    private var nameSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Name")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            TextField("Enter your name", text: $name)
+                .font(.system(size: 17))
+                .textFieldStyle(.roundedBorder)
+                .autocapitalization(.words)
+        }
+        .background(Color.background)
+    }
+
+    private var weightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Weight")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            HStack(spacing: 16) {
+                Picker("Weight Value", selection: $weightValue) {
+                    ForEach(30...350, id: \.self) { value in
+                        Text("\(value)").tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                Picker("Weight Unit", selection: $weightUnit) {
+                    Text("lbs").tag("lbs")
+                    Text("kg").tag("kg")
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+            }
+            .onChange(of: weightUnit) { oldValue, newValue in
+                if weightUnit == "kg" {
+                    weightValue = Int(Double(weightValue) * 2.20462)
+                } else {
+                    weightValue = Int(Double(weightValue) / 2.20462)
+                }
+            }
+        }
+        .background(Color.background)
+    }
+
+    private var heightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Height")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            Picker("Height Mode", selection: $heightMode) {
+                Text("Centimeters").tag("cm")
+                Text("Feet & Inches").tag("ft")
+            }
+            .pickerStyle(.segmented)
+            .padding(.bottom, 8)
+            if heightMode == "cm" {
+                Picker("Height CM", selection: $heightValue) {
+                    ForEach(100...250, id: \.self) { value in
+                        Text("\(value) cm").tag(value)
+                    }
+                }
+                .pickerStyle(.wheel)
+            } else {
+                HStack(spacing: 16) {
+                    Picker("Feet", selection: $feet) {
+                        ForEach(3...8, id: \.self) { value in
+                            Text("\(value) ft").tag(value)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                    Picker("Inches", selection: $inches) {
+                        ForEach(0...11, id: \.self) { value in
+                            Text("\(value) in").tag(value)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(maxWidth: .infinity)
+                }
+                .onChange(of: feet) { oldValue, newValue in updateHeightCM() }
+                .onChange(of: inches) { oldValue, newValue in updateHeightCM() }
+            }
+        }
+        .background(Color.background)
+    }
+
+    private var ageSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Age")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            Picker("Age", selection: $age) {
+                ForEach(10...100, id: \.self) { value in
+                    Text("\(value) years").tag(value)
+                }
+            }
+            .pickerStyle(.wheel)
+        }
+        .background(Color.background)
+    }
+
+    private var levelSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Fitness Level")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            HStack(spacing: 12) {
+                ForEach(levelOptions, id: \.self) { option in
+                    Button(action: { level = option }) {
+                        Text(option)
+                            .font(.system(size: 15, weight: .medium))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .background(level == option ? Color.accent : Color.clear)
+                            .foregroundColor(level == option ? .white : Color.accent)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 20)
+                                    .stroke(Color.accent, lineWidth: 1)
+                            )
+                            .cornerRadius(20)
+                    }
+                }
+            }
+        }
+        .background(Color.background)
+    }
+
+    private var equipmentSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Equipment")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(Color.textSecondary)
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 8) {
+                ForEach(equipmentOptions, id: \.self) { option in
+                    Button(action: {
+                        if equipment.contains(option) {
+                            equipment.remove(option)
+                        } else {
+                            equipment.insert(option)
+                        }
+                    }) {
+                        Text(option)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(equipment.contains(option) ? Color.accent : Color.background)
+                            .foregroundColor(equipment.contains(option) ? .white : .black)
+                            .cornerRadius(16)
+                    }
+                }
+            }
+        }
+        .background(Color.background)
     }
     
     private var hasChanges: Bool {

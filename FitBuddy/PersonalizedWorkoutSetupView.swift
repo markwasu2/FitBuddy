@@ -40,7 +40,7 @@ struct PersonalizedWorkoutSetupView: View {
                     .padding(.bottom, 100)
                 }
             }
-            .background(Color.offWhite)
+            .background(Color.background)
             .navigationTitle("Personalize Your Workouts")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -48,7 +48,7 @@ struct PersonalizedWorkoutSetupView: View {
                     Button("Cancel") {
                         dismiss()
                     }
-                    .foregroundColor(Color.primaryCoral)
+                    .foregroundColor(Color.accent)
                 }
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -58,7 +58,7 @@ struct PersonalizedWorkoutSetupView: View {
                                 currentStep -= 1
                             }
                         }
-                        .foregroundColor(Color.primaryCoral)
+                        .foregroundColor(Color.accent)
                     }
                 }
             }
@@ -75,7 +75,7 @@ struct PersonalizedWorkoutSetupView: View {
             HStack(spacing: 8) {
                 ForEach(0..<totalSteps, id: \.self) { step in
                     Rectangle()
-                        .fill(step <= currentStep ? Color.primaryCoral : Color.textSecondary.opacity(0.3))
+                        .fill(step <= currentStep ? Color.accent : Color.textSecondary.opacity(0.3))
                         .frame(height: 4)
                         .cornerRadius(2)
                 }
@@ -88,7 +88,7 @@ struct PersonalizedWorkoutSetupView: View {
                 .foregroundColor(Color.textSecondary)
         }
         .padding(.vertical, 16)
-        .background(Color.white)
+        .background(Color.accent)
     }
     
     // MARK: - Step Views
@@ -239,11 +239,11 @@ struct PersonalizedWorkoutSetupView: View {
                                     .frame(width: 50, height: 50)
                                     .background(
                                         Circle()
-                                            .fill(preferences.daysPerWeek == days ? Color.primaryCoral : Color.white)
+                                            .fill(preferences.daysPerWeek == days ? Color.accent : Color.background)
                                     )
                                     .overlay(
                                         Circle()
-                                            .stroke(Color.primaryCoral, lineWidth: 2)
+                                            .stroke(Color.accent, lineWidth: 2)
                                     )
                             }
                         }
@@ -313,7 +313,7 @@ struct PersonalizedWorkoutSetupView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 56)
-                    .background(Color.primaryCoral)
+                    .background(Color.accent)
                     .cornerRadius(16)
             }
             .disabled(!preferences.isComplete)
@@ -344,7 +344,7 @@ struct PersonalizedWorkoutSetupView: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(Color.primaryCoral)
+                .background(Color.accent)
                 .cornerRadius(16)
         }
     }
@@ -382,11 +382,11 @@ struct FitnessLevelCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -403,7 +403,7 @@ struct WorkoutTypeCard: View {
             VStack(spacing: 12) {
                 Image(systemName: workoutType.icon)
                     .font(.title2)
-                    .foregroundColor(isSelected ? .white : Color.primaryCoral)
+                    .foregroundColor(isSelected ? .white : Color.accent)
                 
                 Text(workoutType.rawValue)
                     .font(.subheadline)
@@ -415,11 +415,11 @@ struct WorkoutTypeCard: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -436,7 +436,7 @@ struct EquipmentCard: View {
             VStack(spacing: 12) {
                 Image(systemName: equipment.icon)
                     .font(.title2)
-                    .foregroundColor(isSelected ? .white : Color.primaryCoral)
+                    .foregroundColor(isSelected ? .white : Color.accent)
                 
                 Text(equipment.rawValue)
                     .font(.subheadline)
@@ -448,11 +448,11 @@ struct EquipmentCard: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -488,11 +488,11 @@ struct DurationCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -528,11 +528,11 @@ struct TimeCard: View {
             .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -549,7 +549,7 @@ struct GoalCard: View {
             VStack(spacing: 12) {
                 Image(systemName: goal.icon)
                     .font(.title2)
-                    .foregroundColor(isSelected ? .white : Color.primaryCoral)
+                    .foregroundColor(isSelected ? .white : Color.accent)
                 
                 Text(goal.rawValue)
                     .font(.subheadline)
@@ -561,11 +561,11 @@ struct GoalCard: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.primaryCoral : Color.white)
+                    .fill(isSelected ? Color.accent : Color.background)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primaryCoral : Color.textSecondary.opacity(0.3), lineWidth: 2)
+                    .stroke(isSelected ? Color.accent : Color.textSecondary.opacity(0.3), lineWidth: 2)
             )
         }
         .buttonStyle(PlainButtonStyle())
@@ -611,13 +611,13 @@ struct WorkoutSetupCompletionView: View {
                 // Stats
                 VStack(spacing: 16) {
                     HStack(spacing: 24) {
-                        StatCard(title: "Workouts", value: "\(workoutPlanManager.personalizedPlans.count)", icon: "dumbbell.fill")
-                        StatCard(title: "Days/Week", value: "\(workoutPlanManager.preferences.daysPerWeek)", icon: "calendar")
+                                        WorkoutStatCard(title: "Workouts", value: "\(workoutPlanManager.personalizedPlans.count)", icon: "dumbbell.fill")
+                WorkoutStatCard(title: "Days/Week", value: "\(workoutPlanManager.preferences.daysPerWeek)", icon: "calendar")
                     }
                     
                     HStack(spacing: 24) {
-                        StatCard(title: "Duration", value: "\(workoutPlanManager.preferences.workoutDuration.minutes)min", icon: "clock.fill")
-                        StatCard(title: "Time", value: workoutPlanManager.preferences.preferredTime.timeString, icon: "alarm.fill")
+                                        WorkoutStatCard(title: "Duration", value: "\(workoutPlanManager.preferences.workoutDuration.minutes)min", icon: "clock.fill")
+                WorkoutStatCard(title: "Time", value: workoutPlanManager.preferences.preferredTime.timeString, icon: "alarm.fill")
                     }
                 }
                 
@@ -634,7 +634,7 @@ struct WorkoutSetupCompletionView: View {
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Color.primaryCoral)
+                            .background(Color.accent)
                             .cornerRadius(16)
                     }
                     
@@ -644,7 +644,7 @@ struct WorkoutSetupCompletionView: View {
                     }) {
                         Text("Start Over")
                             .font(.subheadline)
-                            .foregroundColor(Color.primaryCoral)
+                            .foregroundColor(Color.accent)
                     }
                 }
                 .padding(.horizontal, 20)
@@ -654,7 +654,7 @@ struct WorkoutSetupCompletionView: View {
     }
 }
 
-struct StatCard: View {
+struct WorkoutStatCard: View {
     let title: String
     let value: String
     let icon: String
@@ -663,7 +663,7 @@ struct StatCard: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.title2)
-                .foregroundColor(Color.primaryCoral)
+                .foregroundColor(Color.accent)
             
             Text(value)
                 .font(.title2)
@@ -676,7 +676,7 @@ struct StatCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(16)
-        .background(Color.white)
+        .background(Color.background)
         .cornerRadius(12)
     }
 } 
