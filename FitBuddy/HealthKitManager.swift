@@ -38,6 +38,10 @@ class HealthKitManager: ObservableObject {
     @Published var isWeightManuallyEdited = false
     @Published var isBodyFatManuallyEdited = false
     
+    // Computed properties for compatibility
+    var stepCount: Int { todaySteps }
+    var workouts: [HKWorkout] { [] } // Placeholder - implement workout tracking if needed
+    
     init() {
         requestAuthorization()
         loadGoals()

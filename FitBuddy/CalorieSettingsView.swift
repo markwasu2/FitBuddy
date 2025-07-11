@@ -166,12 +166,15 @@ struct CalorieGoalCalculatorView: View {
               let weightDouble = Double(weight),
               let heightDouble = Double(height) else { return 2000 }
         
+        // Convert height from inches to centimeters for BMR calculation
+        let heightCm = heightDouble * 2.54
+        
         // BMR calculation using Mifflin-St Jeor Equation
         let bmr: Double
         if gender == "Male" {
-            bmr = (10 * weightDouble) + (6.25 * heightDouble) - (5 * Double(ageInt)) + 5
+            bmr = (10 * weightDouble) + (6.25 * heightCm) - (5 * Double(ageInt)) + 5
         } else {
-            bmr = (10 * weightDouble) + (6.25 * heightDouble) - (5 * Double(ageInt)) - 161
+            bmr = (10 * weightDouble) + (6.25 * heightCm) - (5 * Double(ageInt)) - 161
         }
         
         // Activity multiplier

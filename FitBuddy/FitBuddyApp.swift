@@ -27,6 +27,14 @@ extension Color {
     static let buttonSecondary = Color(hex: "#F8F9FA")
     static let buttonDisabled = Color(hex: "#E9ECEF")
     
+    // System Colors (for compatibility)
+    static let accent = Color(hex: "#007AFF")            // iOS Blue
+    static let error = Color(hex: "#FF3B30")             // Red
+    static let secondary = Color(hex: "#5856D6")         // Purple
+    static let success = Color(hex: "#34C759")           // Green
+    static let info = Color(hex: "#17A2B8")              // Info Blue
+    static let warning = Color(hex: "#FF9500")           // Orange
+    
     // Shadows
     static let shadowLight = Color.black.opacity(0.05)
     static let shadowMedium = Color.black.opacity(0.1)
@@ -75,8 +83,10 @@ extension CGFloat {
     static let spacing2: CGFloat = 2
     static let spacing4: CGFloat = 4
     static let spacing8: CGFloat = 8
+    static let spacingS: CGFloat = 8
     static let spacing12: CGFloat = 12
     static let spacing16: CGFloat = 16
+    static let spacingM: CGFloat = 16
     static let spacing20: CGFloat = 20
     static let spacing24: CGFloat = 24
     static let spacing32: CGFloat = 32
@@ -140,6 +150,13 @@ extension View {
                     .stroke(Color.textTertiary, lineWidth: 1)
             )
     }
+    
+    func cleanCardStyle() -> some View {
+        self
+            .background(Color.surface)
+            .cornerRadius(CGFloat.radius12)
+            .shadow(color: Color.shadowLight, radius: 8, x: 0, y: 2)
+    }
 }
 
 // MARK: - Modern Icon System
@@ -158,6 +175,44 @@ struct ModernIcon: View {
         Image(systemName: name)
             .font(.system(size: size, weight: .medium))
             .foregroundColor(color)
+    }
+}
+
+// MARK: - Clean Icon System (for compatibility)
+struct CleanIcon: View {
+    let name: String
+    let size: CGFloat
+    let color: Color
+    
+    init(_ name: String, size: CGFloat = 24, color: Color = .textPrimary) {
+        self.name = name
+        self.size = size
+        self.color = color
+    }
+    
+    var body: some View {
+        Image(systemName: name)
+            .font(.system(size: size, weight: .medium))
+            .foregroundColor(color)
+    }
+}
+
+// MARK: - Clean Section Header (for compatibility)
+struct CleanSectionHeader: View {
+    let title: String
+    
+    init(_ title: String) {
+        self.title = title
+    }
+    
+    var body: some View {
+        Text(title)
+            .font(.headline)
+            .fontWeight(.semibold)
+            .foregroundColor(.textPrimary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal)
+            .padding(.top)
     }
 }
 
