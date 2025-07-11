@@ -5,6 +5,7 @@ import 'screens/main_tab_view.dart';
 import 'services/health_service.dart';
 import 'services/ai_service.dart';
 import 'services/storage_service.dart';
+import 'services/camera_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +26,7 @@ class FitBuddyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HealthService()),
         ChangeNotifierProvider(create: (_) => AIService()),
         ChangeNotifierProvider(create: (_) => StorageService()),
+        Provider(create: (_) => CameraService()),
       ],
       child: MaterialApp.router(
         title: 'FitBuddy',

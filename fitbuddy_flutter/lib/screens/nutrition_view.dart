@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/storage_service.dart';
 import '../models/food_entry.dart';
+import 'food_camera_view.dart';
 
 enum MealType {
   breakfast,
@@ -616,20 +617,24 @@ class _NutritionViewState extends State<NutritionView> {
     );
   }
 
-  void _showCameraDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Camera'),
-        content: const Text('Camera food recognition coming soon!'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
+  void _showCameraDialog() async {
+    Navigator.pop(context); // Close the dialog first
+    
+    // Navigate to camera view
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const FoodCameraView(),
       ),
     );
+    
+    if (result != null) {
+      // Handle the food entry result
+      setState(() {
+        foodEntries.add(result as FoodEntry);
+        _calculateTotals();
+      });
+    }
   }
 
   void _showBarcodeDialog() {

@@ -15,7 +15,7 @@ class _DashboardViewState extends State<DashboardView> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<HealthService>().fetchHealthData();
+      context.read<HealthService>().initialize();
     });
   }
 
