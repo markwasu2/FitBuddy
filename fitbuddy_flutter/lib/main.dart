@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/main_tab_view.dart';
+import 'screens/onboarding_view.dart';
 import 'services/health_service.dart';
 import 'services/ai_service.dart';
 import 'services/storage_service.dart';
 import 'services/camera_service.dart';
+import 'services/auth_service.dart';
+import 'services/workout_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,9 +26,11 @@ class FitBuddyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => HealthService()),
         ChangeNotifierProvider(create: (_) => AIService()),
         ChangeNotifierProvider(create: (_) => StorageService()),
+        ChangeNotifierProvider(create: (_) => WorkoutService()),
         Provider(create: (_) => CameraService()),
       ],
       child: MaterialApp.router(
@@ -59,6 +64,10 @@ final _router = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const MainTabView(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      builder: (context, state) => const OnboardingView(),
     ),
   ],
 ); 
