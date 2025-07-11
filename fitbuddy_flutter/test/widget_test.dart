@@ -8,12 +8,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:fitbuddy_flutter/main.dart';
+import 'package:peregrine_flutter/main.dart';
 
 void main() {
-      testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-      // Build our app and trigger a frame.
-      await tester.pumpWidget(const FitBuddyApp());
+  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+    // Build our app and trigger a frame.
+    await tester.pumpWidget(const PeregrineApp());
 
     // Verify that our counter starts at 0.
     expect(find.text('0'), findsOneWidget);

@@ -17,10 +17,10 @@ class ChatMessage {
 }
 
 class AIService extends ChangeNotifier {
-  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
-  static const String _visionUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
+  static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+  static const String _visionUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro-vision:generateContent';
   
-  String? _apiKey;
+  String? _apiKey = 'AIzaSyAvdCoeqHcLwhPfeQLGEPQ1WSFXNZBh1v4';
   bool _isLoading = false;
   String? _lastResponse;
   List<ChatMessage> _messages = [];
@@ -105,7 +105,12 @@ class AIService extends ChangeNotifier {
     String? equipment,
   }) async {
     if (_apiKey == null) {
-      throw Exception('API key not set');
+      final errorMsg = 'Gemini API key not set. Please set your API key in settings.';
+      debugPrint(errorMsg);
+      if (kDebugMode) {
+        return errorMsg;
+      }
+      return 'Sorry, AI is not configured.';
     }
 
     _isLoading = true;
@@ -138,6 +143,8 @@ User Profile:
 
 Make it realistic and achievable for the given time and fitness level.
 ''';
+      debugPrint('Gemini prompt:');
+      debugPrint(prompt);
 
       final response = await http.post(
         Uri.parse('$_baseUrl?key=$_apiKey'),
@@ -157,6 +164,9 @@ Make it realistic and achievable for the given time and fitness level.
         }),
       );
 
+      debugPrint('Gemini API response: ${response.statusCode}');
+      debugPrint(response.body);
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final text = data['candidates'][0]['content']['parts'][0]['text'];
@@ -164,11 +174,20 @@ Make it realistic and achievable for the given time and fitness level.
         notifyListeners();
         return text;
       } else {
-        throw Exception('Failed to get workout recommendation: ${response.statusCode}');
+        final errorMsg = 'Failed to get workout recommendation: ${response.statusCode} ${response.body}';
+        debugPrint(errorMsg);
+        if (kDebugMode) {
+          return errorMsg;
+        }
+        return 'Sorry, I could not generate a workout. (AI error)';
       }
-    } catch (e) {
-      print('Error getting workout recommendation: $e');
-      return null;
+    } catch (e, stack) {
+      debugPrint('Error getting workout recommendation: $e');
+      debugPrint(stack.toString());
+      if (kDebugMode) {
+        return 'Error: $e';
+      }
+      return 'Sorry, I had trouble responding. Please try again.';
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -250,5 +269,75 @@ Provide realistic and healthy advice for weight management.
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  /// Sends the full chat history to Gemini and gets a context-aware response.
+  Future<void> sendAgenticMessage(String userMessage) async {
+    if (_apiKey == null) {
+      throw Exception('API key not set');
+    }
+    _isLoading = true;
+    notifyListeners();
+
+    // Add user message to chat log
+    _messages.add(ChatMessage(text: userMessage, isUser: true));
+    notifyListeners();
+
+    try {
+      // Build the chat history for Gemini
+      final List<Map<String, dynamic>> parts = _messages.map((msg) => {
+        'role': msg.isUser ? 'user' : 'model',
+        'parts': [
+          {'text': msg.text}
+        ]
+      }).toList();
+
+      final response = await http.post(
+        Uri.parse('$_baseUrl?key=$_apiKey'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'contents': parts,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final text = data['candidates'][0]['content']['parts'][0]['text'];
+        // Optionally extract suggestions from the response (if you want to fine-tune this later)
+        _messages.add(ChatMessage(text: text, isUser: false));
+        _lastResponse = text;
+        notifyListeners();
+      } else {
+        throw Exception('Failed to get agentic response: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error in agentic chat: $e');
+      _messages.add(ChatMessage(text: 'Sorry, I had trouble responding. Please try again.', isUser: false));
+      notifyListeners();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  /// Export chat log for fine-tuning or personalization
+  List<Map<String, dynamic>> exportChatLog() {
+    return _messages.map((msg) => {
+      'role': msg.isUser ? 'user' : 'model',
+      'text': msg.text,
+      'timestamp': msg.timestamp.toIso8601String(),
+    }).toList();
+  }
+
+  /// Import chat log (for future fine-tuning)
+  void importChatLog(List<Map<String, dynamic>> chatLog) {
+    _messages = chatLog.map((entry) => ChatMessage(
+      text: entry['text'],
+      isUser: entry['role'] == 'user',
+      timestamp: DateTime.parse(entry['timestamp']),
+    )).toList();
+    notifyListeners();
   }
 } 

@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>FitBuddy</string>
+	<string>Peregrine</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>fitbuddy_flutter</string>
+	<string>Peregrine</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -48,22 +48,28 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
+	<!-- App Store Metadata -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.healthcare-fitness</string>
+	
 	<!-- HealthKit Permissions -->
 	<key>NSHealthShareUsageDescription</key>
-	<string>FitBuddy needs access to your health data to track your fitness progress and provide personalized recommendations.</string>
+	<string>This app reads your health data to provide insights.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>FitBuddy needs permission to update your health data to save your workout and nutrition information.</string>
+	<string>This app writes health data to your Health app.</string>
 	
 	<!-- Camera Permissions -->
 	<key>NSCameraUsageDescription</key>
-	<string>FitBuddy needs camera access to analyze food photos for nutrition tracking.</string>
+	<string>Peregrine needs camera access to analyze food photos for nutrition tracking.</string>
 	
 	<!-- Photo Library Permissions -->
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>FitBuddy needs access to your photo library to select food images for nutrition analysis.</string>
+	<string>Peregrine needs access to your photo library to select food images for nutrition analysis.</string>
 	
 	<!-- Microphone Permissions (for video recording if needed) -->
 	<key>NSMicrophoneUsageDescription</key>
-	<string>FitBuddy needs microphone access for video recording features.</string>
+	<string>Peregrine needs microphone access for video recording features.</string>
 </dict>
 </plist> 

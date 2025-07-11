@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
-import '../services/storage_service.dart';
+import 'package:go_router/go_router.dart';
+import '../services/storage_service.dart'; // Added import for StorageService
 
 class OnboardingView extends StatefulWidget {
   const OnboardingView({super.key});
@@ -100,7 +101,7 @@ class _OnboardingViewState extends State<OnboardingView> {
           ),
           const SizedBox(height: 32),
           const Text(
-            'Welcome to FitBuddy!',
+            'Welcome to Peregrine!',
             style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -269,42 +270,68 @@ class _OnboardingViewState extends State<OnboardingView> {
           
           // Height
           const Text(
-            'Height (cm)',
+            'Height',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          Slider(
-            value: _height,
-            min: 120.0,
-            max: 220.0,
-            divisions: 100,
-            label: '${_height.round()} cm',
-            onChanged: (value) {
-              setState(() {
-                _height = value;
-              });
-            },
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _height,
+                  min: 120.0,
+                  max: 220.0,
+                  divisions: 100,
+                  label: '${_height.round()} cm',
+                  onChanged: (value) {
+                    setState(() {
+                      _height = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${_height.round()} cm', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text(_cmToFeetInches(_height), style: const TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ],
           ),
-          
           const SizedBox(height: 16),
-          
           // Weight
           const Text(
-            'Weight (kg)',
+            'Weight',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          Slider(
-            value: _weight,
-            min: 30.0,
-            max: 200.0,
-            divisions: 170,
-            label: '${_weight.round()} kg',
-            onChanged: (value) {
-              setState(() {
-                _weight = value;
-              });
-            },
+          Row(
+            children: [
+              Expanded(
+                child: Slider(
+                  value: _weight,
+                  min: 30.0,
+                  max: 200.0,
+                  divisions: 170,
+                  label: '${_weight.round()} kg',
+                  onChanged: (value) {
+                    setState(() {
+                      _weight = value;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${_weight.round()} kg', style: const TextStyle(fontWeight: FontWeight.bold)),
+                  Text('${(_weight * 2.20462).toStringAsFixed(1)} lbs', style: const TextStyle(color: Colors.grey)),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -441,6 +468,7 @@ class _OnboardingViewState extends State<OnboardingView> {
   }
 
   Widget _buildCompletePage() {
+    final allFieldsFilled = _name.isNotEmpty && _email.isNotEmpty && _password.isNotEmpty && _goals.isNotEmpty;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -462,7 +490,7 @@ class _OnboardingViewState extends State<OnboardingView> {
           ),
           const SizedBox(height: 16),
           const Text(
-            'Your FitBuddy profile has been created successfully. We\'ll use this information to personalize your experience and provide you with the best fitness recommendations.',
+            'Your Peregrine profile has been created successfully. We\'ll use this information to personalize your experience and provide you with the best fitness recommendations.',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey,
@@ -474,15 +502,24 @@ class _OnboardingViewState extends State<OnboardingView> {
             const CircularProgressIndicator()
           else
             ElevatedButton(
-              onPressed: _completeOnboarding,
+              onPressed: allFieldsFilled ? _completeOnboarding : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: allFieldsFilled ? Colors.blue : Colors.grey,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
               ),
               child: const Text(
                 'Get Started',
                 style: TextStyle(fontSize: 18),
+              ),
+            ),
+          if (!allFieldsFilled)
+            const Padding(
+              padding: EdgeInsets.only(top: 16),
+              child: Text(
+                'Please fill in all required fields before continuing.',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500),
+                textAlign: TextAlign.center,
               ),
             ),
         ],
@@ -527,6 +564,7 @@ class _OnboardingViewState extends State<OnboardingView> {
   }
 
   Future<void> _completeOnboarding() async {
+    print('DEBUG: _name=$_name, _email=$_email, _password=$_password, _goals=$_goals');
     if (_name.isEmpty || _email.isEmpty || _password.isEmpty || _goals.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -556,8 +594,12 @@ class _OnboardingViewState extends State<OnboardingView> {
       );
 
       if (success) {
+        // Mark onboarding as complete
+        final storageService = context.read<StorageService>();
+        await storageService.setOnboardingCompleted(true);
         // Navigate to main app
-        Navigator.of(context).pushReplacementNamed('/');
+        context.go('/');
+        print('DEBUG: Called context.go(/) after successful sign up');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -578,5 +620,12 @@ class _OnboardingViewState extends State<OnboardingView> {
         _isLoading = false;
       });
     }
+  }
+
+  String _cmToFeetInches(double cm) {
+    final totalInches = cm / 2.54;
+    final feet = totalInches ~/ 12;
+    final inches = (totalInches % 12).round();
+    return '$feet ft $inches in';
   }
 } 

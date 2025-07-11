@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/storage_service.dart';
 import '../models/user.dart';
 
 class ProfileView extends StatefulWidget {

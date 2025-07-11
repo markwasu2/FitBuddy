@@ -35,7 +35,7 @@ class _DashboardViewState extends State<DashboardView> {
                   backgroundColor: Colors.blue,
                   flexibleSpace: FlexibleSpaceBar(
                     title: const Text(
-                      'FitBuddy',
+                      'Peregrine',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,

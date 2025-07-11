@@ -275,7 +275,7 @@ class _SettingsViewState extends State<SettingsView> {
   Widget _buildAboutTile() {
     return ListTile(
       leading: const Icon(Icons.info),
-      title: const Text('About FitBuddy'),
+      title: const Text('About Peregrine'),
       trailing: const Icon(Icons.chevron_right),
       onTap: () {
         _showAboutDialog();
@@ -429,7 +429,7 @@ class _SettingsViewState extends State<SettingsView> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('About FitBuddy'),
+        title: const Text('About Peregrine'),
         content: const Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:go_router/go_router.dart';
 import 'screens/main_tab_view.dart';
 import 'screens/onboarding_view.dart';
+import 'screens/launch_screen.dart';
 import 'services/health_service.dart';
 import 'services/ai_service.dart';
 import 'services/storage_service.dart';
@@ -16,11 +17,11 @@ void main() async {
   // Initialize services
   await StorageService.initialize();
   
-  runApp(const FitBuddyApp());
+  runApp(const PeregrineApp());
 }
 
-class FitBuddyApp extends StatelessWidget {
-  const FitBuddyApp({super.key});
+class PeregrineApp extends StatelessWidget {
+  const PeregrineApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,19 +29,50 @@ class FitBuddyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => HealthService()),
-        ChangeNotifierProvider(create: (_) => AIService()),
+        ChangeNotifierProvider(create: (_) {
+          final aiService = AIService();
+          aiService.setApiKey('AIzaSyDmmEcuDDv64F6nJCFGTq2iFVS1lNxusHk');
+          return aiService;
+        }),
         ChangeNotifierProvider(create: (_) => StorageService()),
         ChangeNotifierProvider(create: (_) => WorkoutService()),
         Provider(create: (_) => CameraService()),
       ],
       child: MaterialApp.router(
-        title: 'FitBuddy',
+        title: 'Peregrine',
         theme: ThemeData(
           primarySwatch: Colors.blue,
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF007AFF),
             brightness: Brightness.light,
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            ),
+          ),
+          cardTheme: CardThemeData(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
         darkTheme: ThemeData(
@@ -49,6 +81,33 @@ class FitBuddyApp extends StatelessWidget {
           colorScheme: ColorScheme.fromSeed(
             seedColor: const Color(0xFF007AFF),
             brightness: Brightness.dark,
+          ),
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            centerTitle: true,
+            titleTextStyle: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF007AFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+            ),
+          ),
+          cardTheme: CardThemeData(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
         ),
         routerConfig: _router,
@@ -59,8 +118,12 @@ class FitBuddyApp extends StatelessWidget {
 }
 
 final _router = GoRouter(
-  initialLocation: '/',
+  initialLocation: '/launch',
   routes: [
+    GoRoute(
+      path: '/launch',
+      builder: (context, state) => const LaunchScreen(),
+    ),
     GoRoute(
       path: '/',
       builder: (context, state) => const MainTabView(),

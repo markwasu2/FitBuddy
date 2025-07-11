@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ai_service.dart';
-import '../services/storage_service.dart';
 
 class AICoachView extends StatefulWidget {
   const AICoachView({super.key});
@@ -26,7 +25,7 @@ class _AICoachViewState extends State<AICoachView> {
       final aiService = context.read<AIService>();
       if (aiService.messages.isEmpty) {
         aiService.addMessage(
-          'Hi! I\'m your FitBuddy AI coach. I can help you with workout plans, nutrition advice, and fitness goals. What would you like to know?',
+          'Hi! I\'m your Peregrine AI coach. I can help you with workout plans, nutrition advice, and fitness goals. What would you like to know?',
           isUser: false,
         );
       }
@@ -97,7 +96,7 @@ class _AICoachViewState extends State<AICoachView> {
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
               borderRadius: BorderRadius.circular(25),
             ),
             child: const Icon(
@@ -122,7 +121,7 @@ class _AICoachViewState extends State<AICoachView> {
                 Text(
                   'Your personal fitness assistant',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withAlpha(204), // 0.8 * 255 = 204
                     fontSize: 12,
                   ),
                 ),
@@ -174,7 +173,7 @@ class _AICoachViewState extends State<AICoachView> {
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withAlpha(25), // 0.1 * 255 = 25
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -205,12 +204,12 @@ class _AICoachViewState extends State<AICoachView> {
                             ),
                             decoration: BoxDecoration(
                               color: isUser 
-                                  ? Colors.white.withOpacity(0.2)
+                                  ? Colors.white.withAlpha(51)
                                   : Colors.blue[50],
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
                                 color: isUser 
-                                    ? Colors.white.withOpacity(0.3)
+                                    ? Colors.white.withAlpha(76)
                                     : Colors.blue[200]!,
                               ),
                             ),
@@ -277,7 +276,7 @@ class _AICoachViewState extends State<AICoachView> {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withAlpha(25), // 0.1 * 255 = 25
                   blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
@@ -312,39 +311,72 @@ class _AICoachViewState extends State<AICoachView> {
   }
 
   Widget _buildQuickActions() {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildQuickActionButton(
-              icon: Icons.fitness_center,
-              label: 'Workout Plan',
-              onTap: () => _sendMessage('Create a workout plan for me'),
-            ),
-            const SizedBox(width: 8),
-            _buildQuickActionButton(
-              icon: Icons.restaurant,
-              label: 'Nutrition Advice',
-              onTap: () => _sendMessage('Give me nutrition advice'),
-            ),
-            const SizedBox(width: 8),
-            _buildQuickActionButton(
-              icon: Icons.trending_up,
-              label: 'Progress Tips',
-              onTap: () => _sendMessage('How can I improve my progress?'),
-            ),
-            const SizedBox(width: 8),
-            _buildQuickActionButton(
-              icon: Icons.help,
-              label: 'Fitness Tips',
-              onTap: () => _sendMessage('Share some fitness tips'),
-            ),
-          ],
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _onCreateWorkout,
+            icon: const Icon(Icons.fitness_center),
+            label: const Text('Create Workout'),
+          ),
+          ElevatedButton.icon(
+            onPressed: _onGetNutrition,
+            icon: const Icon(Icons.restaurant),
+            label: const Text('Nutrition'),
+          ),
+          ElevatedButton.icon(
+            onPressed: _onAnalyzeFood,
+            icon: const Icon(Icons.camera_alt),
+            label: const Text('Analyze Food'),
+          ),
+        ],
       ),
     );
+  }
+
+  void _onCreateWorkout() async {
+    final aiService = context.read<AIService>();
+    setState(() => _isTyping = true);
+    aiService.addMessage('Create a personalized workout for me.', isUser: true);
+    final response = await aiService.getWorkoutRecommendation(
+      fitnessLevel: 'intermediate',
+      goals: ['strength', 'endurance'],
+      availableTime: 45,
+      equipment: 'Bodyweight',
+    );
+    aiService.addMessage(response ?? 'Sorry, I could not generate a workout.', isUser: false);
+    setState(() => _isTyping = false);
+    _scrollToBottom();
+  }
+
+  void _onGetNutrition() async {
+    final aiService = context.read<AIService>();
+    setState(() => _isTyping = true);
+    aiService.addMessage('Give me personalized nutrition advice.', isUser: true);
+    final response = await aiService.getNutritionAdvice(
+      currentWeight: 70,
+      targetWeight: 65,
+      activityLevel: 'active',
+      dietaryRestrictions: [],
+    );
+    aiService.addMessage(response ?? 'Sorry, I could not generate nutrition advice.', isUser: false);
+    setState(() => _isTyping = false);
+    _scrollToBottom();
+  }
+
+  void _onAnalyzeFood() async {
+    final result = await Navigator.pushNamed(context, '/food-camera');
+    if (result is String) {
+      final aiService = context.read<AIService>();
+      setState(() => _isTyping = true);
+      aiService.addMessage('Analyze this food image.', isUser: true);
+      final response = await aiService.analyzeFoodImage(result);
+      aiService.addMessage(response ?? 'Sorry, I could not analyze the food image.', isUser: false);
+      setState(() => _isTyping = false);
+      _scrollToBottom();
+    }
   }
 
   Widget _buildQuickActionButton({
@@ -387,7 +419,7 @@ class _AICoachViewState extends State<AICoachView> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withAlpha(25), // 0.1 * 255 = 25
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -436,82 +468,18 @@ class _AICoachViewState extends State<AICoachView> {
     );
   }
 
-  void _sendMessage(String text) {
+  void _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
     final aiService = context.read<AIService>();
-    
-    // Add user message
     aiService.addMessage(text, isUser: true);
     _messageController.clear();
-    
-    // Show typing indicator
-    setState(() {
-      _isTyping = true;
-    });
-    
-    // Scroll to bottom
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+    setState(() => _isTyping = true);
+    _scrollToBottom();
 
-    // Simulate AI response
-    Future.delayed(const Duration(seconds: 2), () {
-      final response = _generateAIResponse(text);
-      aiService.addMessage(response.text, isUser: false, suggestions: response.suggestions);
-      
-      setState(() {
-        _isTyping = false;
-      });
-      
-      // Scroll to bottom
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    });
-  }
-
-  AIResponse _generateAIResponse(String userMessage) {
-    final lowerMessage = userMessage.toLowerCase();
-    
-    if (lowerMessage.contains('workout') || lowerMessage.contains('exercise')) {
-      return AIResponse(
-        text: 'I\'d be happy to help you with a workout plan! What are your fitness goals? Are you looking to build strength, lose weight, or improve endurance?',
-        suggestions: ['Build strength', 'Lose weight', 'Improve endurance', 'General fitness'],
-      );
-    } else if (lowerMessage.contains('nutrition') || lowerMessage.contains('diet') || lowerMessage.contains('food')) {
-      return AIResponse(
-        text: 'Great question about nutrition! A balanced diet is key to your fitness journey. What specific nutrition advice are you looking for?',
-        suggestions: ['Meal planning', 'Protein intake', 'Healthy snacks', 'Calorie counting'],
-      );
-    } else if (lowerMessage.contains('progress') || lowerMessage.contains('improve')) {
-      return AIResponse(
-        text: 'To improve your progress, focus on consistency, proper form, and progressive overload. Are you tracking your workouts and nutrition?',
-        suggestions: ['Track workouts', 'Set goals', 'Measure progress', 'Get accountability'],
-      );
-    } else if (lowerMessage.contains('tip') || lowerMessage.contains('advice')) {
-      return AIResponse(
-        text: 'Here\'s a great tip: Start with compound exercises like squats, deadlifts, and push-ups. They work multiple muscle groups and give you the most bang for your buck!',
-        suggestions: ['More tips', 'Exercise form', 'Recovery advice', 'Motivation'],
-      );
-    } else {
-      return AIResponse(
-        text: 'I\'m here to help with your fitness journey! You can ask me about workout plans, nutrition advice, progress tips, or general fitness questions.',
-        suggestions: ['Workout plan', 'Nutrition advice', 'Progress tips', 'Fitness questions'],
-      );
-    }
+    await aiService.sendAgenticMessage(text);
+    setState(() => _isTyping = false);
+    _scrollToBottom();
   }
 
   void _showSettingsDialog() {
@@ -528,6 +496,18 @@ class _AICoachViewState extends State<AICoachView> {
         ],
       ),
     );
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 }
 

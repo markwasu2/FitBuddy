@@ -18,34 +18,44 @@ class MainTabView extends StatefulWidget {
 class _MainTabViewState extends State<MainTabView> {
   int _currentIndex = 0;
   bool _showOnboarding = false;
+  late final StorageService _storageService;
 
   @override
   void initState() {
     super.initState();
+    _storageService = Provider.of<StorageService>(context, listen: false);
+    _storageService.addListener(_onStorageChanged);
+    _checkOnboardingStatus();
+  }
+
+  @override
+  void dispose() {
+    _storageService.removeListener(_onStorageChanged);
+    super.dispose();
+  }
+
+  void _onStorageChanged() {
     _checkOnboardingStatus();
   }
 
   Future<void> _checkOnboardingStatus() async {
-    final storageService = Provider.of<StorageService>(context, listen: false);
-    final hasCompletedOnboarding = await storageService.getOnboardingCompleted();
-    
+    final hasCompletedOnboarding = _storageService.getOnboardingCompleted();
     if (!hasCompletedOnboarding) {
       setState(() {
         _showOnboarding = true;
+      });
+    } else {
+      setState(() {
+        _showOnboarding = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    print('DEBUG: MainTabView build called, _showOnboarding=$_showOnboarding');
     if (_showOnboarding) {
-      return OnboardingView(
-        onComplete: () {
-          setState(() {
-            _showOnboarding = false;
-          });
-        },
-      );
+      return OnboardingView();
     }
 
     return Scaffold(
@@ -63,7 +73,7 @@ class _MainTabViewState extends State<MainTabView> {
         decoration: BoxDecoration(
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha(25), // 0.1 * 255 = 25
               blurRadius: 10,
               offset: const Offset(0, -2),
             ),

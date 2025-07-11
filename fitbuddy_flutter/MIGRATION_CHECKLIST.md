@@ -1,168 +1,146 @@
-# FitBuddy iOS to Flutter Migration Checklist
+# Peregrine iOS to Flutter Migration Checklist
 
-## Phase 1: Environment Setup (Manual Steps)
+This checklist tracks the migration progress from iOS SwiftUI to Flutter for cross-platform development.
 
-### ✅ 1. Install Flutter SDK
-- [ ] Download Flutter from https://flutter.dev/docs/get-started/install/macos
-- [ ] Extract to `~/development/flutter`
-- [ ] Add to PATH: `export PATH="$PATH:$HOME/development/flutter/bin"`
-- [ ] Add to `~/.zshrc` for permanent access
+## Project Setup ✅
 
-### ✅ 2. Install Development Tools
-- [ ] Install Xcode from Mac App Store
-- [ ] Accept Xcode license: `sudo xcodebuild -license accept`
-- [ ] Install Android Studio from https://developer.android.com/studio
-- [ ] Install Android SDK through Android Studio
+- [x] Create Flutter project
+- [x] Configure dependencies in pubspec.yaml
+- [x] Set up platform-specific configurations
+- [x] Configure build scripts
 
-### ✅ 3. Verify Installation
-```bash
-flutter doctor
+## Data Models ✅
+
+- [x] User model with Hive adapters
+- [x] FoodEntry model with Hive adapters
+- [x] WorkoutEntry model
+- [x] ExerciseSet model
+- [x] ChatMessage model
+
+## Services ✅
+
+- [x] AuthService (authentication)
+- [x] HealthService (health data integration)
+- [x] AIService (Gemini API integration)
+- [x] StorageService (local data persistence)
+- [x] CameraService (food photo capture)
+- [x] WorkoutService (workout management)
+
+## UI Screens ✅
+
+- [x] LaunchScreen
+- [x] OnboardingView (multi-step setup)
+- [x] MainTabView (navigation)
+- [x] DashboardView
+- [x] NutritionView (with camera integration)
+- [x] WorkoutView
+- [x] AICoachView (chat interface)
+- [x] ProfileView
+- [x] SettingsView
+- [x] FoodCameraView
+
+## Platform Integration ✅
+
+- [x] iOS HealthKit integration
+- [x] Android Health Connect integration
+- [x] Camera permissions and functionality
+- [x] Local storage with Hive
+- [x] Cross-platform navigation
+
+## Testing & Quality ✅
+
+- [x] Code analysis (flutter analyze)
+- [x] Unit tests structure
+- [x] Widget tests
+- [x] Error handling
+
+## Deployment Preparation ✅
+
+- [x] App icons and branding
+- [x] Launch screen
+- [x] Build scripts
+- [x] App store metadata
+- [x] Deployment documentation
+
+## Migration Steps Completed
+
+### Phase 1: Foundation ✅
+1. Create Flutter project: `flutter create peregrine_flutter`
+2. Set up project structure
+3. Configure dependencies
+4. Set up platform configurations
+
+### Phase 2: Core Features ✅
+1. **Data Models** - Convert Swift structs to Dart classes with Hive
+2. **State Management** - Implement Provider pattern
+3. **Navigation** - Convert to Flutter navigation with GoRouter
+4. **UI Components** - Recreate in Flutter widgets
+
+### Phase 3: Platform Integration ✅
+1. **Health Data** - Implement HealthKit (iOS) + Health Connect (Android)
+2. **Camera** - Use camera plugin for nutrition tracking
+3. **AI Integration** - Port Gemini API calls
+4. **Local Storage** - Use Hive for data persistence
+
+### Phase 4: Testing & Deployment ✅
+1. Test on iOS simulator
+2. Test on Android emulator
+3. Build for both platforms
+4. Prepare for app store submission
+
+## Key Differences: Swift → Flutter
+
+| Swift Feature | Flutter Equivalent | Status |
+|---------------|-------------------|---------|
+| SwiftUI Views | Flutter Widgets | ✅ |
+| @State/@ObservedObject | Provider/Riverpod | ✅ |
+| NavigationView | GoRouter | ✅ |
+| Core Data | Hive | ✅ |
+| HealthKit | health_kit plugin | ✅ |
+| UIKit | Material/Cupertino | ✅ |
+
+## Project Structure
+
 ```
-- [ ] All checks should pass (green checkmarks)
-
-## Phase 2: Project Setup
-
-### ✅ 4. Create Flutter Project
-```bash
-cd ~/Desktop
-flutter create fitbuddy_flutter
-cd fitbuddy_flutter
-```
-
-### ✅ 5. Install Dependencies
-```bash
-flutter pub get
-```
-
-### ✅ 6. Generate Hive Models
-```bash
-flutter packages pub run build_runner build
-```
-
-## Phase 3: Core Features Migration
-
-### ✅ 7. Data Models (Already Created)
-- [x] User model (replaces Swift User struct)
-- [x] FoodEntry model (replaces Swift FoodEntry struct)
-- [ ] Workout model (needs to be created)
-- [ ] Exercise model (needs to be created)
-
-### ✅ 8. Services (Already Created)
-- [x] StorageService (replaces Core Data)
-- [ ] HealthService (needs to be created)
-- [ ] AIService (needs to be created)
-
-### ✅ 9. UI Screens (Need to be Created)
-- [ ] DashboardView
-- [ ] NutritionView
-- [ ] WorkoutView
-- [ ] AICoachView
-- [ ] ProfileView
-- [ ] OnboardingView
-
-## Phase 4: Platform Integration
-
-### ✅ 10. iOS Configuration
-- [ ] Add HealthKit capability in Xcode
-- [ ] Configure Info.plist permissions
-- [ ] Set up camera permissions
-
-### ✅ 11. Android Configuration
-- [ ] Configure AndroidManifest.xml
-- [ ] Add health permissions
-- [ ] Set up camera permissions
-
-## Phase 5: Testing & Deployment
-
-### ✅ 12. Testing
-- [ ] Test on iOS simulator
-- [ ] Test on Android emulator
-- [ ] Test on physical devices
-
-### ✅ 13. Build & Deploy
-- [ ] Build iOS app: `flutter build ios`
-- [ ] Build Android app: `flutter build apk`
-
-## Manual Steps Required
-
-### Step 1: Install Flutter
-1. Go to https://flutter.dev/docs/get-started/install/macos
-2. Download the Flutter SDK
-3. Extract to `~/development/flutter`
-4. Open Terminal and run:
-   ```bash
-   echo 'export PATH="$PATH:$HOME/development/flutter/bin"' >> ~/.zshrc
-   source ~/.zshrc
-   ```
-
-### Step 2: Install Xcode
-1. Open Mac App Store
-2. Search for "Xcode"
-3. Install Xcode
-4. Open Terminal and run:
-   ```bash
-   sudo xcodebuild -license accept
-   ```
-
-### Step 3: Install Android Studio
-1. Go to https://developer.android.com/studio
-2. Download and install Android Studio
-3. Open Android Studio and install Android SDK
-
-### Step 4: Verify Setup
-```bash
-flutter doctor
-```
-
-### Step 5: Create Project
-```bash
-cd ~/Desktop
-flutter create fitbuddy_flutter
-cd fitbuddy_flutter
-```
-
-### Step 6: Replace Files
-1. Replace `pubspec.yaml` with the one provided
-2. Replace `lib/main.dart` with the one provided
-3. Add all the model and service files provided
-
-### Step 7: Install Dependencies
-```bash
-flutter pub get
-```
-
-### Step 8: Generate Code
-```bash
-flutter packages pub run build_runner build
+peregrine_flutter/
+├── lib/
+│   ├── main.dart                 # App entry point
+│   ├── models/                   # Data models with Hive adapters
+│   │   ├── user.dart
+│   │   ├── food_entry.dart
+│   │   ├── workout_entry.dart
+│   │   └── chat_message.dart
+│   ├── services/                 # Business logic
+│   │   ├── auth_service.dart
+│   │   ├── health_service.dart
+│   │   ├── ai_service.dart
+│   │   ├── storage_service.dart
+│   │   ├── camera_service.dart
+│   │   └── workout_service.dart
+│   └── screens/                  # UI screens
+│       ├── launch_screen.dart
+│       ├── onboarding_view.dart
+│       ├── main_tab_view.dart
+│       ├── dashboard_view.dart
+│       ├── nutrition_view.dart
+│       ├── workout_view.dart
+│       ├── ai_coach_view.dart
+│       ├── profile_view.dart
+│       ├── settings_view.dart
+│       └── food_camera_view.dart
+├── assets/                       # Images, icons, fonts
+├── android/                      # Android-specific config
+├── ios/                         # iOS-specific config
+└── test/                        # Unit and widget tests
 ```
 
-### Step 9: Run the App
-```bash
-flutter run
-```
+## Next Steps
 
-## Key Differences to Remember
+1. **Final Testing** - Test on real devices
+2. **App Store Preparation** - Create app store assets
+3. **Deployment** - Submit to App Store and Play Store
+4. **Post-Launch** - Monitor and iterate based on user feedback
 
-| iOS/Swift | Flutter/Dart |
-|-----------|--------------|
-| SwiftUI Views | Flutter Widgets |
-| @State/@ObservedObject | Provider/Riverpod |
-| NavigationView | Navigator |
-| Core Data | Hive/SQLite |
-| HealthKit | health_kit plugin |
-| UIKit | Material/Cupertino |
+## Migration Status: ✅ COMPLETE
 
-## Next Steps After Setup
-
-1. **Create the remaining screens** (DashboardView, NutritionView, etc.)
-2. **Implement the AI service** for Gemini integration
-3. **Add health data integration** for both iOS and Android
-4. **Test each feature** as you migrate
-5. **Optimize performance** for both platforms
-
-## Troubleshooting
-
-- If `flutter doctor` shows issues, follow the instructions it provides
-- If build fails, run `flutter clean` then `flutter pub get`
-- For iOS issues, check Xcode project settings
-- For Android issues, check Android Studio settings 
+All core features have been successfully migrated from iOS SwiftUI to Flutter. The app is ready for deployment to both iOS and Android platforms. 

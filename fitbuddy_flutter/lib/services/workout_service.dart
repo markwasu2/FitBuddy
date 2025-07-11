@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import '../models/workout_entry.dart';
-import '../models/food_entry.dart';
 
 class WorkoutService extends ChangeNotifier {
   List<WorkoutEntry> _workouts = [];

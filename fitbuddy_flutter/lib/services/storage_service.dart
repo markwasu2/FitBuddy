@@ -1,6 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/food_entry.dart';
 import '../models/user.dart';
@@ -243,6 +241,18 @@ class StorageService extends ChangeNotifier {
     }
     
     notifyListeners();
+  }
+
+  // Onboarding Management
+  Future<void> setOnboardingCompleted(bool completed) async {
+    await _ensureInitialized();
+    await _preferencesBoxInstance.put('onboarding_completed', completed);
+    notifyListeners();
+  }
+
+  bool getOnboardingCompleted() {
+    if (!_isInitialized) return false;
+    return _preferencesBoxInstance.get('onboarding_completed', defaultValue: false) as bool;
   }
 
   // Cleanup

@@ -73,7 +73,6 @@ class _NutritionViewState extends State<NutritionView> {
   }
 
   void _loadNutritionData() {
-    final storageService = context.read<StorageService>();
     // Load food entries and calculate totals
     // This would be implemented with actual data loading
     _calculateTotals();
@@ -456,9 +455,9 @@ class _NutritionViewState extends State<NutritionView> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withAlpha(25), // 0.1 * 255 = 25
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withAlpha(76)), // 0.3 * 255 = 76
         ),
         child: Column(
           children: [

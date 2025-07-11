@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/storage_service.dart';
 
 class WorkoutView extends StatefulWidget {
   const WorkoutView({super.key});

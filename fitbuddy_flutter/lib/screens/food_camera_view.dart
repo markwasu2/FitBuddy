@@ -1,8 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../services/camera_service.dart';
 import '../models/food_entry.dart';
+import 'dart:convert'; // Added for base64 encoding
 
 class FoodCameraView extends StatefulWidget {
   const FoodCameraView({super.key});
@@ -75,7 +75,7 @@ class _FoodCameraViewState extends State<FoodCameraView> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withOpacity(0.7),
+                      Colors.black.withAlpha(179),
                     ],
                   ),
                 ),
@@ -101,7 +101,7 @@ class _FoodCameraViewState extends State<FoodCameraView> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 4),
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withAlpha(76),
                         ),
                         child: const Icon(
                           Icons.camera,
@@ -128,11 +128,11 @@ class _FoodCameraViewState extends State<FoodCameraView> {
             // Loading Overlay
             if (_isLoading || _isAnalyzing)
               Container(
-                color: Colors.black.withOpacity(0.7),
-                child: const Center(
+                color: Colors.black.withAlpha(179),
+                child: Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
-                                        children: [
+                    children: [
                       const CircularProgressIndicator(color: Colors.white),
                       const SizedBox(height: 16),
                       Text(
@@ -155,7 +155,7 @@ class _FoodCameraViewState extends State<FoodCameraView> {
 
   Widget _buildAnalysisResult() {
     return Container(
-      color: Colors.black.withOpacity(0.9),
+      color: Colors.black.withAlpha(230),
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -291,9 +291,9 @@ class _FoodCameraViewState extends State<FoodCameraView> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withAlpha(25),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: Colors.white.withAlpha(51)),
       ),
       child: Column(
         children: [
@@ -310,7 +310,7 @@ class _FoodCameraViewState extends State<FoodCameraView> {
           Text(
             title,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withAlpha(179),
               fontSize: 12,
             ),
           ),
@@ -320,58 +320,42 @@ class _FoodCameraViewState extends State<FoodCameraView> {
   }
 
   Future<void> _takePicture() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isAnalyzing = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
-      final imageFile = await _cameraService.takePicture();
-      if (imageFile != null) {
-        final foodEntry = await _cameraService.analyzeFoodImage(imageFile);
-        setState(() {
-          _analyzedFood = foodEntry;
-          _isAnalyzing = false;
-        });
+      final image = await _cameraService.takePicture();
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        if (mounted) {
+          Navigator.pop(context, base64Image);
+        }
       }
     } catch (e) {
-      setState(() {
-        _isAnalyzing = false;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error taking picture: $e')),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _pickFromGallery() async {
-    if (_isLoading) return;
-
-    setState(() {
-      _isAnalyzing = true;
-    });
-
+    setState(() => _isLoading = true);
     try {
-      final imageFile = await _cameraService.pickImageFromGallery();
-      if (imageFile != null) {
-        final foodEntry = await _cameraService.analyzeFoodImage(imageFile);
-        setState(() {
-          _analyzedFood = foodEntry;
-          _isAnalyzing = false;
-        });
-      } else {
-        setState(() {
-          _isAnalyzing = false;
-        });
+      final image = await _cameraService.pickImageFromGallery();
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        if (mounted) {
+          Navigator.pop(context, base64Image);
+        }
       }
     } catch (e) {
-      setState(() {
-        _isAnalyzing = false;
-      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error picking image: $e')),
       );
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 

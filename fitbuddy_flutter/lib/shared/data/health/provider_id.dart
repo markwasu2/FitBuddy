@@ -1,0 +1,1 @@
+enum ProviderId { appleHealth, googleFit, fitbit, whoop } 

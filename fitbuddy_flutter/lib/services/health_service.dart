@@ -71,11 +71,14 @@ class HealthService extends ChangeNotifier {
       final startOfDay = DateTime(now.year, now.month, now.day);
 
       // Fetch steps
-      _steps = await _getSteps(startOfDay, now) ?? 0;
+      final steps = await _getSteps(startOfDay, now);
+      _steps = steps ?? 0;
 
       // Fetch calories
-      _caloriesBurned = await _getCaloriesBurned(startOfDay, now) ?? 0;
-      _activeCalories = await _getActiveCalories(startOfDay, now) ?? 0;
+      final caloriesBurned = await _getCaloriesBurned(startOfDay, now);
+      _caloriesBurned = caloriesBurned ?? 0;
+      final activeCalories = await _getActiveCalories(startOfDay, now);
+      _activeCalories = activeCalories ?? 0;
 
       // Fetch heart rate (latest)
       _heartRate = await _getLatestHeartRate() ?? 0;
@@ -112,9 +115,9 @@ class HealthService extends ChangeNotifier {
     try {
       final calories = await _health!.getHealthDataFromTypes(start, end, [HealthDataType.ACTIVE_ENERGY_BURNED]);
       if (calories.isNotEmpty) {
-        return calories.fold(0.0, (sum, data) {
+        return calories.fold<double>(0.0, (sum, data) {
           final value = data.value as double?;
-          return sum + (value ?? 0.0);
+          return (sum ?? 0.0) + (value ?? 0.0);
         });
       }
       return null;
@@ -128,9 +131,9 @@ class HealthService extends ChangeNotifier {
     try {
       final calories = await _health!.getHealthDataFromTypes(start, end, [HealthDataType.ACTIVE_ENERGY_BURNED]);
       if (calories.isNotEmpty) {
-        return calories.fold(0.0, (sum, data) {
+        return calories.fold<double>(0.0, (sum, data) {
           final value = data.value as double?;
-          return sum + (value ?? 0.0);
+          return (sum ?? 0.0) + (value ?? 0.0);
         });
       }
       return null;

@@ -1,79 +1,78 @@
-# FitBuddy Flutter Migration Guide
+# Peregrine Flutter Migration Guide
+
+This guide will help you migrate your iOS Peregrine app to Flutter for cross-platform (iOS + Android) development.
 
 ## Overview
-This guide will help you migrate your iOS FitBuddy app to Flutter for cross-platform (iOS + Android) development.
 
-## Prerequisites (Manual Steps Required)
+Peregrine is a comprehensive fitness app with AI coaching, nutrition tracking, and workout planning. This Flutter version provides the same functionality across iOS and Android platforms.
 
-### 1. Install Flutter SDK
-```bash
-# Download Flutter from https://flutter.dev/docs/get-started/install/macos
-# Extract to ~/development/flutter
-# Add to PATH: export PATH="$PATH:$HOME/development/flutter/bin"
-```
+## Features
 
-### 2. Install Development Tools
-- **Xcode** (for iOS development)
-- **Android Studio** (for Android development)
-- **VS Code** or **Android Studio** (for Flutter development)
-
-### 3. Verify Installation
-```bash
-flutter doctor
-```
-
-## Migration Steps
-
-### Phase 1: Project Setup
-1. Create Flutter project: `flutter create fitbuddy_flutter`
-2. Set up dependencies in `pubspec.yaml`
-3. Configure platform-specific settings
-
-### Phase 2: Core Features Migration
-1. **Data Models** - Convert Swift structs to Dart classes
-2. **State Management** - Implement Provider/Riverpod
-3. **Navigation** - Convert to Flutter navigation
-4. **UI Components** - Recreate in Flutter widgets
-
-### Phase 3: Platform Integration
-1. **Health Data** - Implement HealthKit (iOS) + Google Fit (Android)
-2. **Camera** - Use camera plugin for nutrition tracking
-3. **AI Integration** - Port Gemini API calls
-4. **Local Storage** - Use SharedPreferences/Hive
-
-### Phase 4: Testing & Deployment
-1. Test on iOS simulator
-2. Test on Android emulator
-3. Build for both platforms
-
-## Key Differences: Swift → Flutter
-
-| Swift Feature | Flutter Equivalent |
-|---------------|-------------------|
-| SwiftUI Views | Flutter Widgets |
-| @State/@ObservedObject | Provider/Riverpod |
-| NavigationView | Navigator |
-| Core Data | Hive/SQLite |
-| HealthKit | health_kit plugin |
-| UIKit | Material/Cupertino |
+- 🤖 AI-Powered Workout Plans
+- 📊 Nutrition Tracking with Food Recognition
+- 🏃‍♂️ Health Data Integration
+- 📱 Cross-Platform Support
+- 🎯 Personalized Goals & Progress Tracking
 
 ## Project Structure
+
 ```
-fitbuddy_flutter/
+peregrine_flutter/
 ├── lib/
-│   ├── main.dart
-│   ├── models/
-│   ├── services/
-│   ├── screens/
-│   ├── widgets/
-│   └── utils/
-├── android/
-├── ios/
-└── pubspec.yaml
+│   ├── main.dart                 # App entry point
+│   ├── models/                   # Data models
+│   ├── screens/                  # UI screens
+│   └── services/                 # Business logic
+├── assets/                       # Images, icons, fonts
+├── android/                      # Android-specific config
+├── ios/                         # iOS-specific config
+└── test/                        # Unit and widget tests
 ```
 
-## Next Steps
-1. Install Flutter SDK
-2. Run `flutter doctor` to verify setup
-3. Follow the migration guide step by step
-4. Test each feature as you migrate 
+## Getting Started
+
+1. Create Flutter project: `flutter create peregrine_flutter`
+2. Install dependencies: `flutter pub get`
+3. Run the app: `flutter run`
+
+## Development
+
+- **Hot Reload**: `r` in terminal
+- **Hot Restart**: `R` in terminal
+- **Quit**: `q` in terminal
+
+## Building for Production
+
+### iOS
+```bash
+flutter build ios --release
+```
+
+### Android
+```bash
+flutter build apk --release
+flutter build appbundle --release
+```
+
+## Testing
+
+```bash
+flutter test
+flutter analyze
+```
+
+## Deployment
+
+See `DEPLOYMENT.md` for detailed deployment instructions.
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License. 
