@@ -20,7 +20,7 @@ class AIService extends ChangeNotifier {
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent';
   static const String _visionUrl = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro-002:generateContent';
   
-  String? _apiKey = 'AIzaSyAvdCoeqHcLwhPfeQLGEPQ1WSFXNZBh1v4';
+  String? _apiKey = 'AIzaSyAJdd8D_Q6AM0SgVumLpnEPOEIPXVpitGQ';
   bool _isLoading = false;
   String? _lastResponse;
   List<ChatMessage> _messages = [];
