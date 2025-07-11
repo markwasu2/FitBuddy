@@ -2,6 +2,20 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final List<String> suggestions;
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    this.suggestions = const [],
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
+
 class AIService extends ChangeNotifier {
   static const String _baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
   static const String _visionUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
@@ -9,12 +23,28 @@ class AIService extends ChangeNotifier {
   String? _apiKey;
   bool _isLoading = false;
   String? _lastResponse;
+  List<ChatMessage> _messages = [];
   
   bool get isLoading => _isLoading;
   String? get lastResponse => _lastResponse;
+  List<ChatMessage> get messages => _messages;
 
   void setApiKey(String apiKey) {
     _apiKey = apiKey;
+  }
+
+  void addMessage(String text, {bool isUser = false, List<String> suggestions = const []}) {
+    _messages.add(ChatMessage(
+      text: text,
+      isUser: isUser,
+      suggestions: suggestions,
+    ));
+    notifyListeners();
+  }
+
+  void clearMessages() {
+    _messages.clear();
+    notifyListeners();
   }
 
   Future<String?> analyzeFoodImage(String imageBase64) async {
