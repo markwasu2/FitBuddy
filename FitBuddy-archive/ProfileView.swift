@@ -44,7 +44,7 @@ struct ProfileView: View {
                 CleanIcon("person.circle.fill", size: 80, color: .accent)
                 
                 VStack(spacing: .spacingXS) {
-                    Text(profileManager.name.isEmpty ? "FitBuddy User" : profileManager.name)
+                    Text(profileManager.name.isEmpty ? "Peregrine User" : profileManager.name)
                         .font(.title2)
                         .fontWeight(.semibold)
                         .foregroundColor(.textPrimary)

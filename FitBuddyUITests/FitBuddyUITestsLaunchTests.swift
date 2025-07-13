@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class FitBuddyUITestsLaunchTests: XCTestCase {
+final class PeregrineUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

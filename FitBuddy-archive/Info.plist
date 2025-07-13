@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Peregrine needs access to your calendar to schedule your workouts and send you reminders.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Peregrine needs full access to your calendar to create and manage your workout schedule.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>Peregrine uses your health data to track workouts, steps, heart rate, and show your fitness progress.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>Peregrine writes your workout and activity data to Health to help you track your fitness progress.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Peregrine needs microphone access for voice commands and speech recognition features.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Peregrine uses speech recognition to understand your voice commands for workout planning and navigation.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Peregrine needs access to your photo library to scan food items for calorie tracking.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Peregrine needs camera access to capture photos of your meals for nutrition tracking.</string>
+</dict>
+</plist>

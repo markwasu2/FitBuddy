@@ -12,7 +12,7 @@ struct Config {
     }()
     
     // MARK: - App Configuration
-    static let appName = "FitBuddy"
+    static let appName = "Peregrine"
     static let appVersion = "1.0.0"
     
     // MARK: - Feature Flags

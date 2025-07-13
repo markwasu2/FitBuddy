@@ -32,7 +32,7 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(name: "FitBuddy")
+        container = NSPersistentContainer(name: "Peregrine")
         if inMemory {
             if let firstStoreDescription = container.persistentStoreDescriptions.first {
                 firstStoreDescription.url = URL(fileURLWithPath: "/dev/null")

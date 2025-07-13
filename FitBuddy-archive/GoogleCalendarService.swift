@@ -7,7 +7,7 @@ class GoogleCalendarService: ObservableObject {
     
     private let clientID = "YOUR_GOOGLE_CLIENT_ID" // Replace with actual Google Client ID
     private let clientSecret = "YOUR_GOOGLE_CLIENT_SECRET" // Replace with actual Google Client Secret
-    private let redirectURI = "com.fitbuddy.app://oauth2redirect"
+    private let redirectURI = "com.peregrine.app://oauth2redirect"
     
     private var accessToken: String?
     private var refreshToken: String?

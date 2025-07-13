@@ -190,7 +190,7 @@ class ChatEngine: ObservableObject {
     func startOnboarding() {
         currentStage = .onboarding
         currentQuestionIndex = .name
-        currentResponse = ChatResponse(text: "Welcome to FitBuddy! Let's set up your profile. What's your name?", stage: .onboarding, actions: [.none])
+        currentResponse = ChatResponse(text: "Welcome to Peregrine! Let's set up your profile. What's your name?", stage: .onboarding, actions: [.none])
     }
     
     func generateWorkout() {

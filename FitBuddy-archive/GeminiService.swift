@@ -164,7 +164,7 @@ class GeminiService: ObservableObject {
     // Persistent context that survives app restarts
     private var persistentContext: PersistentConversationContext {
         get {
-            if let data = UserDefaults.standard.data(forKey: "FitBuddyPersistentContext"),
+            if let data = UserDefaults.standard.data(forKey: "PeregrinePersistentContext"),
                let context = try? JSONDecoder().decode(PersistentConversationContext.self, from: data) {
                 return context
             }
@@ -172,7 +172,7 @@ class GeminiService: ObservableObject {
         }
         set {
             if let data = try? JSONEncoder().encode(newValue) {
-                UserDefaults.standard.set(data, forKey: "FitBuddyPersistentContext")
+                UserDefaults.standard.set(data, forKey: "PeregrinePersistentContext")
             }
         }
     }
@@ -261,7 +261,7 @@ class GeminiService: ObservableObject {
             """
         } else {
             return """
-            **Welcome to FitBuddy!** 💪
+            **Welcome to Peregrine!** 💪
             
             I'm your AI fitness coach. Let's start by understanding your preferences!
             
@@ -555,7 +555,7 @@ class GeminiService: ObservableObject {
     func clearConversation() {
         messages = [
             ChatMessage(
-                content: "Hey! I'm your FitBuddy coach. I can help you with workout plans, answer fitness questions, and keep track of your progress. What would you like to work on today?",
+                content: "Hey! I'm your Peregrine coach. I can help you with workout plans, answer fitness questions, and keep track of your progress. What would you like to work on today?",
                 isFromUser: false,
                 timestamp: Date()
             )

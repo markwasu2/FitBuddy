@@ -7,7 +7,7 @@
 
 import XCTest
 
-final class FitBuddyUITests: XCTestCase {
+final class PeregrineUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.

@@ -65,7 +65,7 @@ struct ModernProfileView: View {
                     )
                 
                 VStack(spacing: .spacing4) {
-                    Text(profileManager.userName.isEmpty ? "FitBuddy User" : profileManager.userName)
+                    Text(profileManager.userName.isEmpty ? "Peregrine User" : profileManager.userName)
                         .font(.headlineMedium)
                         .fontWeight(.semibold)
                         .foregroundColor(.textPrimary)

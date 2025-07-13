@@ -1,7 +1,7 @@
 import SwiftUI
 import HealthKit
 
-struct FitBuddyDashboard: View {
+struct PeregrineDashboard: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @EnvironmentObject var profileManager: ProfileManager
     @State private var selectedTab = 0

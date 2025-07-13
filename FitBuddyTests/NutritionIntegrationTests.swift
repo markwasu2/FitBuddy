@@ -1,6 +1,6 @@
 import XCTest
 import SwiftUI
-@testable import FitBuddy
+@testable import Peregrine
 
 final class NutritionIntegrationTests: XCTestCase {
     func testAddEntryIncrementsTotalCalories() async {

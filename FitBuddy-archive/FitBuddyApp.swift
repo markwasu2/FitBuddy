@@ -393,7 +393,7 @@ struct ModernEmptyState: View {
 
 // MARK: - App Entry Point
 @main
-struct FitBuddyApp: App {
+struct PeregrineApp: App {
     @StateObject private var healthKitManager = HealthKitManager()
     @StateObject private var profileManager = ProfileManager()
     @StateObject private var workoutPlanManager = WorkoutPlanManager()

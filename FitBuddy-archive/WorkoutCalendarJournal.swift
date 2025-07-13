@@ -405,4 +405,4 @@ struct JournalCell: View {
 }
 
 // MARK: - SPARKLINE
-// Using Sparkline from FitBuddyDashboard.swift 
+// Using Sparkline from PeregrineDashboard.swift 

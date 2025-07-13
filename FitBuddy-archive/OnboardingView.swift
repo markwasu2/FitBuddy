@@ -97,7 +97,7 @@ struct OnboardingView: View {
                     )
                 
                 VStack(spacing: .spacing12) {
-                    Text("Welcome to FitBuddy")
+                    Text("Welcome to Peregrine")
                         .font(.displaySmall)
                         .fontWeight(.bold)
                         .foregroundColor(.textPrimary)
@@ -275,7 +275,7 @@ struct OnboardingView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.textPrimary)
                 
-                Text("FitBuddy works best when connected to Apple Health")
+                Text("Peregrine works best when connected to Apple Health")
                     .font(.bodyMedium)
                     .foregroundColor(.textSecondary)
                     .multilineTextAlignment(.center)

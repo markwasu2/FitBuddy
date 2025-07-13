@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# FitBuddy Backup Script
+# Peregrine Backup Script
 # This script saves your current code changes to Git
 
-echo "🏋️ FitBuddy Backup Script"
+echo "🏋️ Peregrine Backup Script"
 echo "=========================="
 
 # Check if there are any changes to commit

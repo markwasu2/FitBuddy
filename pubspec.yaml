@@ -1,0 +1,43 @@
+name: peregrine_flutter
+description: A cross-platform fitness app with AI coaching and health tracking
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  go_router: ^12.1.3
+  cupertino_icons: ^1.0.2
+  flutter_svg: ^2.0.9
+  health: ^10.0.0              # HealthKit + Google Fit wrapper
+  health_kit_reporter: ^3.3.0  # extra HealthKit datatypes
+  fitbitter: ^2.0.5            # Fitbit API helper (OAuth + REST)
+  dio: ^6.3.0                  # HTTP for WHOOP
+  flutter_secure_storage: ^10.0.0  # encrypted tokens
+  workmanager: ^0.5.0          # background sync
+  shared_preferences: ^2.2.2
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  intl: ^0.18.1
+  uuid: ^4.2.1
+  permission_handler: ^11.0.1
+  fl_chart: ^0.65.0
+  table_calendar: ^3.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.7
+  mocktail: any
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/ 

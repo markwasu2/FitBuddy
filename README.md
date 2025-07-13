@@ -1,4 +1,4 @@
-# FitBuddy - iOS Fitness App
+# Peregrine - iOS Fitness App
 
 A comprehensive iOS fitness app built with SwiftUI that helps users track workouts, plan routines, and achieve their fitness goals.
 
@@ -43,7 +43,7 @@ A comprehensive iOS fitness app built with SwiftUI that helps users track workou
 ### 1. Clone the Repository
 ```bash
 git clone <repository-url>
-cd FitBuddy
+cd Peregrine
 ```
 
 ### 2. Configure API Key (Required for AI Features)
@@ -55,7 +55,7 @@ export GEMINI_API_KEY="your_actual_api_key_here"
 ```
 
 #### Option B: Direct Configuration (Development Only)
-Edit `FitBuddy/Config.swift` and replace the placeholder:
+Edit `Peregrine/Config.swift` and replace the placeholder:
 ```swift
 // Replace this line in Config.swift
 return "YOUR_GEMINI_API_KEY_HERE"
@@ -71,16 +71,16 @@ return "your_actual_api_key_here"
 ### 4. Build and Run
 ```bash
 # Open in Xcode
-open FitBuddy.xcodeproj
+open Peregrine.xcodeproj
 
 # Or build from command line
-xcodebuild -project FitBuddy.xcodeproj -scheme FitBuddy -destination 'platform=iOS Simulator,name=iPhone 16' build
+xcodebuild -project Peregrine.xcodeproj -scheme Peregrine -destination 'platform=iOS Simulator,name=iPhone 16' build
 ```
 
 ## Architecture
 
 ### Core Components
-- **FitBuddyApp**: Main app entry point with environment objects
+- **PeregrineApp**: Main app entry point with environment objects
 - **GPTService**: AI integration with Google Gemini
 - **HealthKitManager**: Health data integration
 - **CalendarManager**: Event scheduling
